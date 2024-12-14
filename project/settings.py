@@ -30,6 +30,8 @@ DEBUG = env("DEBUG", default=False)
 
 ALLOWED_HOSTS = ["*"]
 
+CSRF_TRUSTED_ORIGINS = [env("APP_URL", default="http://localhost:8000")]
+
 
 # Application definition
 
