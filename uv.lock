@@ -25,18 +25,44 @@ wheels = [
 ]
 
 [[package]]
+name = "django-settings-env"
+version = "5.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "envex" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/9f/668bd27eaeb1a8e1cf128b20ac7a234303d6c63a7064458af957b56a9b44/django_settings_env-5.2.0.tar.gz", hash = "sha256:625f92db6c79169f40c609524bbba04fa16ad334baf47aa910e3f5af44cb81e0", size = 22564 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/10/5b14d8a39f1612659e2e8e34aab0ebf0dcdb1c4374cdb09055240cde1d90/django_settings_env-5.2.0-py3-none-any.whl", hash = "sha256:9860686103f0b4c8c012f9182789fb9ce60e13897fc99b96c3be0bba9e8ebcde", size = 18242 },
+]
+
+[[package]]
+name = "envex"
+version = "3.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3d/b9/f327d512e3e713374bea405ad2dd208da7b18b333be72fa77f77c04580cf/envex-3.3.1.tar.gz", hash = "sha256:920c53c31789c910ff8a4fc2d52fa15598f543f1d1ce1506a0305fca957261fb", size = 19821 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6d/32/8da6ee6ff3bb9254cb0c1bc9541be8bca6fee42bf03a5b3ef1a2179ecb79/envex-3.3.1-py3-none-any.whl", hash = "sha256:5f35ab9ab5f4f8552e6d5cc49079551d6d05faa0bb72bff29cda29be418bd698", size = 14220 },
+]
+
+[[package]]
 name = "globaldetective"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "django" },
+    { name = "django-settings-env" },
     { name = "gunicorn" },
+    { name = "psycopg" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=5.1.4" },
+    { name = "django-settings-env", specifier = ">=5.2.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "psycopg", specifier = ">=3.2.3" },
 ]
 
 [[package]]
@@ -61,12 +87,34 @@ wheels = [
 ]
 
 [[package]]
+name = "psycopg"
+version = "3.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d1/ad/7ce016ae63e231575df0498d2395d15f005f05e32d3a2d439038e1bd0851/psycopg-3.2.3.tar.gz", hash = "sha256:a5764f67c27bec8bfac85764d23c534af2c27b893550377e37ce59c12aac47a2", size = 155550 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/21/534b8f5bd9734b7a2fcd3a16b1ee82ef6cad81a4796e95ebf4e0c6a24119/psycopg-3.2.3-py3-none-any.whl", hash = "sha256:644d3973fe26908c73d4be746074f6e5224b03c1101d302d9a53bf565ad64907", size = 197934 },
+]
+
+[[package]]
 name = "sqlparse"
 version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e5/40/edede8dd6977b0d3da179a342c198ed100dd2aba4be081861ee5911e4da4/sqlparse-0.5.3.tar.gz", hash = "sha256:09f67787f56a0b16ecdbde1bfc7f5d9c3371ca683cfeaa8e6ff60b4807ec9272", size = 84999 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/5c/bfd6bd0bf979426d405cc6e71eceb8701b148b16c21d2dc3c261efc61c7b/sqlparse-0.5.3-py3-none-any.whl", hash = "sha256:cf2196ed3418f3ba5de6af7e82c694a9fbdbfecccdfc72e281548517081f16ca", size = 44415 },
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.12.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/df/db/f35a00659bc03fec321ba8bce9420de607a1d37f8342eee1863174c69557/typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8", size = 85321 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/9f/ad63fc0248c5379346306f8668cda6e2e2e9c95e01216d2b8ffd9ff037d0/typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d", size = 37438 },
 ]
 
 [[package]]
