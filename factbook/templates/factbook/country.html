@@ -4,8 +4,12 @@
     <title>{{ country.name }}</title>
   </head>
   <body>
-    <h1>{{ country.name }}</h1>
+    <h1>{{ country.common_name|default:country.name }}</h1>
+    {% if country.common_name %}
+      <h2>{{ country.name }}</h2>
+    {% endif %}
     <p>Currency: {{ country.currency }}</p>
     <p>Flag: {% for each in country.flag_colours.all %}{{ each.colour }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    <p><a href="{% url 'index' %}">All countries</a></p>
   </body>
 </html>
