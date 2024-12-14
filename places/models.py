@@ -8,6 +8,9 @@ class Country(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name_plural = "Countries"
+
 
 class City(models.Model):
     name = models.CharField(max_length=100)
@@ -15,3 +18,6 @@ class City(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name_plural = "Cities"
