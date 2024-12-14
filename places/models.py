@@ -10,6 +10,7 @@ class Country(models.Model):
     fauna = models.TextField(blank=True, null=True)
     geography = models.TextField(blank=True, null=True)
     exports = models.TextField(blank=True, null=True)
+    flag_colours = models.ManyToManyField("FlagColour", blank=True)
 
     def __str__(self):
         return self.name
@@ -27,3 +28,13 @@ class City(models.Model):
 
     class Meta:
         verbose_name_plural = "Cities"
+
+
+class FlagColour(models.Model):
+    colour = models.CharField(max_length=20, primary_key=True)
+
+    def __str__(self):
+        return self.colour
+
+    class Meta:
+        verbose_name_plural = "Flag Colours"
