@@ -1,0 +1,15 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Factbook</title>
+  </head>
+  <body>
+    <h1>Factbook</h1>
+    <p>Choose a country:</p>
+    <ul>
+      {% for country in countries %}
+      <li><a href="{# url 'country' country.code #}">{{ country.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>
