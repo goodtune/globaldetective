@@ -6,6 +6,6 @@
   <body>
     <h1>{{ country.name }}</h1>
     <p>Currency: {{ country.currency }}</p>
-    <p>Flag: {{ country.flag_colours.all }}</p>
+    <p>Flag: {% for each in country.flag_colours.all %}{{ each.colour }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
   </body>
 </html>
