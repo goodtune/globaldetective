@@ -1,0 +1,2 @@
+# globaldetective
+Global Detective Quest
