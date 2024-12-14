@@ -4,7 +4,7 @@ from places.models import Country
 
 
 def index(request):
-    countries = Country.objects.all()
+    countries = Country.objects.order_by("common_name")
     context = {"countries": countries}
     return render(request, "factbook/index.html", context)
 

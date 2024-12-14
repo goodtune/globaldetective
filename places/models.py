@@ -3,7 +3,7 @@ from django.db import models
 
 class Country(models.Model):
     name = models.CharField("Official Name", max_length=100)
-    common_name = models.CharField("Common Name", max_length=50, blank=True, null=True)
+    common_name = models.CharField("Common Name", max_length=50)
     code = models.CharField(max_length=2)
     currency = models.CharField(max_length=20, blank=True, null=True)
     flora = models.TextField(blank=True, null=True)
@@ -16,6 +16,7 @@ class Country(models.Model):
         return self.name
 
     class Meta:
+        ordering = ("common_name",)
         verbose_name_plural = "Countries"
 
 
