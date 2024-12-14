@@ -19,6 +19,12 @@ class CityAdmin(admin.ModelAdmin):
         "flag_colours",
     )
     list_filter = ("country__currency", "country__flag_colours")
+    search_fields = (
+        "name",
+        "country__name",
+        "country__common_name",
+        "country__currency",
+    )
 
     def flag_colours(self, obj):
         return ", ".join(
