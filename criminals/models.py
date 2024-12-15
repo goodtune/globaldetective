@@ -38,6 +38,11 @@ class Auto(models.TextChoices):
     MOTORBIKE = "MOTORBIKE", "Motorcycle"
 
 
+class Food(models.TextChoices):
+    SEAFOOD = "SEAFOOD", "Seafood"
+    MEXICAN = "MEXICAN", "Mexican"
+
+
 class Suspect(models.Model):
     name = models.CharField(max_length=100)
     sex = models.CharField(
@@ -68,6 +73,13 @@ class Suspect(models.Model):
     )
     auto = models.CharField(
         choices=Auto.choices,
+        max_length=20,
+        db_index=True,
+        null=True,
+        blank=True,
+    )
+    food = models.CharField(
+        choices=Food.choices,
         max_length=20,
         db_index=True,
         null=True,
