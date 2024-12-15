@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "criminals",
     "places",
+    "dossiers",
     "factbook",
 ]
 

@@ -1,0 +1,17 @@
+<html lang="en">{% load static %}
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dossiers</title>
+  </head>
+  <body>
+    <h1>Suspects</h1>
+    <p>Choose a criminal:</p>
+    <ul>
+      {% for suspect in suspects %}
+      <li>
+        <img src="{% get_static_prefix %}/criminals/img/{{ suspect.name }}.jpg" width="200"/>
+        <a href="{# url 'dossier' suspect.name #}">{{ suspect.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>
