@@ -8,7 +8,9 @@
     <p>Choose a country:</p>
     <ul>
       {% for country in countries %}
-      <li><a href="{% url 'country' country.code %}">{{ country.common_name }}</a></li>
+      <li>
+        <a href="{% url 'factbook:country' country.code %}">{{ country.common_name }}</a>
+      </li>
       {% endfor %}
     </ul>
   </body>
