@@ -1,0 +1,15 @@
+<html lang="en">{% load static %}
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ suspect.name }}</title>
+  </head>
+  <body>
+    <h1>{{ suspect.name }}</h1>
+    <img src="{% get_static_prefix %}criminals/img/{{ suspect.name }}.jpg" width="400"/>
+    <dl>
+        <dt>Auto:</dt>
+        <dd>{{ suspect.get_auto_display|default:"Unknown" }}</dd>
+    </dl>
+    <p><a href="{% url 'dossiers:index' %}">All suspects</a></p>
+  </body>
+</html>
