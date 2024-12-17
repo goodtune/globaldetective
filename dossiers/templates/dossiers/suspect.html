@@ -9,6 +9,16 @@
     <dl>
         <dt>Auto:</dt>
         <dd>{{ suspect.get_auto_display|default:"Unknown" }}</dd>
+        <dt>Feature:</dt> 
+        <dd>{{ suspect.get_feature_display|default:"Unknown" }}</dd>
+        <dt>Hair:</dt> 
+        <dd>{{ suspect.get_hair_display|default:"Unknown" }}</dd>
+        <dt>Hobby:</dt> 
+        <dd>{{ suspect.get_hobby_display|default:"Unknown" }}</dd>
+        <dt>Sex:</dt> 
+        <dd>{{ suspect.get_sex_display|default:"Unknown" }}</dd>
+        <dt>Food:</dt> 
+        <dd>{{ suspect.get_food_display|default:"Unknown" }}</dd>
     </dl>
     <p><a href="{% url 'dossiers:index' %}">All suspects</a></p>
   </body>
