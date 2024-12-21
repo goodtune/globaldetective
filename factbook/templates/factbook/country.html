@@ -10,6 +10,7 @@
     {% endif %}
     <p>Currency: {{ country.currency }}</p>
     <p>Flag: {% for each in country.flag_colours.all %}{{ each.colour }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    <p>Geography: {{ country.geography }}</p>
     <p><a href="{% url 'factbook:index' %}">All countries</a></p>
   </body>
 </html>

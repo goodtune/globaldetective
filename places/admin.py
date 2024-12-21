@@ -3,7 +3,14 @@ from places.models import City, Country, FlagColour
 
 
 class CountryAdmin(admin.ModelAdmin):
-    list_display = ("name", "common_name", "code", "currency", "get_flag_colours")
+    list_display = (
+        "name",
+        "common_name",
+        "code",
+        "currency",
+        "get_flag_colours",
+        "geography",
+    )
     list_editable = ("common_name", "currency")
     list_filter = ("currency",)
 
