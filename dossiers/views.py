@@ -4,7 +4,7 @@ from criminals.models import Suspect
 
 
 def index(request):
-    suspects = Suspect.objects.all()
+    suspects = Suspect.objects.order_by("name")
     context = {"suspects": suspects}
     return render(request, "dossiers/index.html", context)
 

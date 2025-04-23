@@ -1,3 +1,5 @@
 *.json
 *.pyc
 *.sqlite3
+/.env
+/.venv
