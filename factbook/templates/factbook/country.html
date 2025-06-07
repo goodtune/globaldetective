@@ -1,16 +1,14 @@
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>{{ country.name }}</title>
-  </head>
-  <body>
-    <h1>{{ country.common_name }}</h1>
-    {% if country.common_name != country.name %}
-      <h2>{{ country.name }}</h2>
-    {% endif %}
-    <p>Currency: {{ country.currency }}</p>
-    <p>Flag: {% for each in country.flag_colours.all %}{{ each.colour }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
-    <p>Geography: {{ country.geography }}</p>
-    <p><a href="{% url 'factbook:index' %}">All countries</a></p>
-  </body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}{{ country.name }}{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">{{ country.common_name }}</h1>
+  {% if country.common_name != country.name %}
+    <h2 class="h5 text-muted">{{ country.name }}</h2>
+  {% endif %}
+  <p><strong>Currency:</strong> {{ country.currency }}</p>
+  <p><strong>Flag:</strong> {% for each in country.flag_colours.all %}{{ each.colour }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+  <p><strong>Geography:</strong> {{ country.geography }}</p>
+  <p><a href="{% url 'factbook:index' %}" class="btn btn-secondary">All countries</a></p>
+{% endblock %}

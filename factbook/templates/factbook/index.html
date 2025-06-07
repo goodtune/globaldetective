@@ -1,17 +1,15 @@
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Factbook</title>
-  </head>
-  <body>
-    <h1>Factbook</h1>
-    <p>Choose a country:</p>
-    <ul>
-      {% for country in countries %}
-      <li>
-        <a href="{% url 'factbook:country' country.code %}">{{ country.common_name }}</a>
-      </li>
-      {% endfor %}
-    </ul>
-  </body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Factbook{% endblock %}
+
+{% block content %}
+  <h1 class="mb-4">Factbook</h1>
+  <p>Choose a country:</p>
+  <ul class="list-group">
+    {% for country in countries %}
+    <li class="list-group-item">
+      <a href="{% url 'factbook:country' country.code %}">{{ country.common_name }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
