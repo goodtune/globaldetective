@@ -22,7 +22,6 @@ from project.views import index
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", index, name="index"),
-    path("games/", include("games.urls")),
     path("world-factbook/", include("factbook.urls")),
     path("dossiers/", include("dossiers.urls")),
 ]

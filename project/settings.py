@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     "places",
     "dossiers",
     "factbook",
-    "games",
 ]
 
 MIDDLEWARE = [
@@ -86,7 +85,7 @@ WSGI_APPLICATION = "project.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {"default": env.database_url(default=f"sqlite:///{BASE_DIR}/db.sqlite3")}
+DATABASES = {"default": env.database_url(default="sqlite:///db.sqlite3")}
 
 
 # Password validation
