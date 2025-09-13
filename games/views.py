@@ -43,10 +43,14 @@ def country_detail(request, country_code):
     cities = country.city_set.all()
     landmarks = Landmark.objects.filter(city__country=country)
     
+    # Get available clues for this country
+    available_clues = Clue.objects.filter(country=country).select_related('case')
+    
     context = {
         'country': country,
         'cities': cities,
         'landmarks': landmarks,
+        'available_clues': available_clues,
     }
     return render(request, 'games/country_detail.html', context)
 
@@ -141,3 +145,30 @@ def demo_login(request):
     login(request, user)
     messages.success(request, f'Logged in as {user.username}!')
     return redirect('games:index')
+
+
+def case_briefing(request, case_id):
+    """Show case briefing with suspect info and initial clues"""
+    case = get_object_or_404(Case, id=case_id)
+    all_clues = case.clues.all().order_by('difficulty_level')
+    correct_path_clues = all_clues.filter(is_correct_path=True)
+    red_herring_clues = all_clues.filter(is_correct_path=False)
+    
+    context = {
+        'case': case,
+        'all_clues': all_clues,
+        'correct_path_clues': correct_path_clues,
+        'red_herring_clues': red_herring_clues,
+        'total_countries': all_clues.values('country').distinct().count(),
+    }
+    return render(request, 'games/case_briefing.html', context)
+
+
+def cases_list(request):
+    """Show all available cases"""
+    cases = Case.objects.all().order_by('difficulty')
+    
+    context = {
+        'cases': cases,
+    }
+    return render(request, 'games/cases_list.html', context)

@@ -136,6 +136,31 @@
   </div>
   
   <div class="col-lg-4">
+    {% if available_clues %}
+      <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="mb-0">🔍 Detective Clues Available!</h5>
+        </div>
+        <div class="card-body">
+          <p class="small">You've discovered important clues in {{ country.common_name }}:</p>
+          {% for clue in available_clues %}
+            <div class="alert alert-info small mb-2">
+              <strong>{{ clue.get_clue_type_display }} Clue:</strong><br>
+              <em>{{ clue.text }}</em>
+              <div class="mt-1">
+                <span class="badge bg-secondary">{{ clue.case.title }}</span>
+                {% if clue.is_correct_path %}
+                  <span class="badge bg-success">Correct Path</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Red Herring</span>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+    
     <div class="card mb-3">
       <div class="card-header">
         <h5>🔍 Investigation Notes</h5>
