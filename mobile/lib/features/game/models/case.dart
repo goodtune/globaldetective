@@ -2,7 +2,6 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
 
 import 'villain.dart';
-import 'location.dart';
 
 part 'case.g.dart';
 

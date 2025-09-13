@@ -6,6 +6,7 @@ import '../../../core/constants/app_constants.dart';
 import '../layouts/responsive_layout.dart';
 import '../widgets/platform_info_card.dart';
 import '../../networking/blocs/network_bloc.dart';
+import 'case_selection_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -321,7 +322,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _handleSoloPractice(BuildContext context) {
-    _showDialog(context, 'Solo Practice', 'Solo practice mode coming soon!\n\nPractice your detective skills without multiplayer.');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CaseSelectionScreen(),
+      ),
+    );
   }
 
   void _handleSettings(BuildContext context) {

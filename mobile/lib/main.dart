@@ -10,6 +10,7 @@ import 'shared/themes/app_theme.dart';
 import 'shared/blocs/app_bloc_observer.dart';
 import 'features/ui/screens/splash_screen.dart';
 import 'features/game/blocs/game_state/game_state_bloc.dart';
+import 'features/game/blocs/case_management/case_management_bloc.dart';
 import 'features/networking/blocs/network_bloc.dart';
 
 void main() async {
@@ -38,6 +39,9 @@ class GlobalDetectiveApp extends StatelessWidget {
       providers: [
         BlocProvider<GameStateBloc>(
           create: (context) => GameStateBloc(),
+        ),
+        BlocProvider<CaseManagementBloc>(
+          create: (context) => CaseManagementBloc(),
         ),
         BlocProvider<NetworkBloc>(
           create: (context) => NetworkBloc()..add(const NetworkInitialized()),

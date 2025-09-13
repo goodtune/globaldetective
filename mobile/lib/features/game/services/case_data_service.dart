@@ -264,11 +264,25 @@ class CaseDataService {
   }
 
   Villain _getRandomVillain(CaseDifficulty difficulty) {
+    final villainDifficulty = _mapCaseDifficultyToVillain(difficulty);
     final suitableVillains = _villains.where((v) => 
-        _getDifficultyOrder(v.difficulty) <= _getDifficultyOrder(difficulty)
+        _getDifficultyOrder(v.difficulty) <= _getDifficultyOrder(villainDifficulty)
     ).toList();
     
     return suitableVillains[_random.nextInt(suitableVillains.length)];
+  }
+
+  VillainDifficulty _mapCaseDifficultyToVillain(CaseDifficulty caseDifficulty) {
+    switch (caseDifficulty) {
+      case CaseDifficulty.rookie:
+        return VillainDifficulty.rookie;
+      case CaseDifficulty.detective:
+        return VillainDifficulty.intermediate;
+      case CaseDifficulty.inspector:
+        return VillainDifficulty.expert;
+      case CaseDifficulty.master:
+        return VillainDifficulty.master;
+    }
   }
 
   int _getDifficultyOrder(VillainDifficulty difficulty) {
