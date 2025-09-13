@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/platform_service.dart';
 import '../../../core/constants/app_constants.dart';
 import 'home_screen.dart';
 
-class SplashScreen extends ConsumerStatefulWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  ConsumerState<SplashScreen> createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
+class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;

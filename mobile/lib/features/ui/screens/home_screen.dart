@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/services/platform_service.dart';
 import '../../../core/constants/app_constants.dart';
 import '../layouts/responsive_layout.dart';
 import '../widgets/platform_info_card.dart';
+import '../../networking/blocs/network_bloc.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final platformInfo = PlatformService.instance.platformInfo;
     
     return ResponsiveLayout(
@@ -119,24 +120,36 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 32),
             
-            _buildMenuButton(
-              context,
-              icon: Icons.wifi_outlined,
-              title: 'Host Game',
-              subtitle: 'Start a new multiplayer session',
-              onTap: () => _showFeatureDialog(context, 'Host Game'),
-              isMobile: isMobile,
+            BlocBuilder<NetworkBloc, NetworkState>(
+              builder: (context, networkState) {
+                return _buildMenuButton(
+                  context,
+                  icon: Icons.wifi_outlined,
+                  title: 'Host Game',
+                  subtitle: networkState.isServerRunning 
+                      ? 'Server running (${networkState.connectedPlayers} players)'
+                      : 'Start a new multiplayer session',
+                  onTap: () => _handleHostGame(context, networkState),
+                  isMobile: isMobile,
+                );
+              },
             ),
             
             const SizedBox(height: 16),
             
-            _buildMenuButton(
-              context,
-              icon: Icons.group_add_outlined,
-              title: 'Join Game',
-              subtitle: 'Connect to an existing session',
-              onTap: () => _showFeatureDialog(context, 'Join Game'),
-              isMobile: isMobile,
+            BlocBuilder<NetworkBloc, NetworkState>(
+              builder: (context, networkState) {
+                return _buildMenuButton(
+                  context,
+                  icon: Icons.group_add_outlined,
+                  title: 'Join Game',
+                  subtitle: networkState.hasAvailableSessions
+                      ? '${networkState.availableSessions.length} sessions found'
+                      : 'Connect to an existing session',
+                  onTap: () => _handleJoinGame(context, networkState),
+                  isMobile: isMobile,
+                );
+              },
             ),
             
             const SizedBox(height: 16),
@@ -146,7 +159,7 @@ class HomeScreen extends ConsumerWidget {
               icon: Icons.person_outline,
               title: 'Solo Practice',
               subtitle: 'Explore the world on your own',
-              onTap: () => _showFeatureDialog(context, 'Solo Practice'),
+              onTap: () => _handleSoloPractice(context),
               isMobile: isMobile,
             ),
             
@@ -156,7 +169,7 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _showFeatureDialog(context, 'Settings'),
+                    onPressed: () => _handleSettings(context),
                     icon: const Icon(Icons.settings_outlined),
                     label: const Text('Settings'),
                   ),
@@ -164,7 +177,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(width: 16),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _showFeatureDialog(context, 'About'),
+                    onPressed: () => _handleAbout(context),
                     icon: const Icon(Icons.info_outline),
                     label: const Text('About'),
                   ),
@@ -283,12 +296,220 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  void _showFeatureDialog(BuildContext context, String feature) {
+  void _handleHostGame(BuildContext context, NetworkState networkState) {
+    if (networkState.isServerRunning) {
+      // Show server management dialog
+      _showServerManagementDialog(context, networkState);
+    } else {
+      // Show host game dialog
+      _showHostGameDialog(context);
+    }
+  }
+
+  void _handleJoinGame(BuildContext context, NetworkState networkState) {
+    if (!networkState.isNetworkReady) {
+      _showDialog(context, 'Network Error', 'Network not ready. Please check your connection.');
+      return;
+    }
+
+    // Start discovery if not already discovering
+    if (!networkState.isDiscovering) {
+      context.read<NetworkBloc>().add(const DiscoveryStarted());
+    }
+
+    _showJoinGameDialog(context, networkState);
+  }
+
+  void _handleSoloPractice(BuildContext context) {
+    _showDialog(context, 'Solo Practice', 'Solo practice mode coming soon!\n\nPractice your detective skills without multiplayer.');
+  }
+
+  void _handleSettings(BuildContext context) {
+    _showDialog(context, 'Settings', 'Settings menu coming soon!\n\nConfigure audio, graphics, and gameplay options.');
+  }
+
+  void _handleAbout(BuildContext context) {
+    _showDialog(context, 'About Global Detective', 
+        '🕵️‍♀️ Global Detective v${AppConstants.appVersion}\n\n'
+        'A collaborative geography mystery game inspired by Carmen Sandiego.\n\n'
+        'Built with Flutter for multi-platform gaming.\n\n'
+        'Platform: ${PlatformService.instance.platformInfo.deviceType.name}');
+  }
+
+  void _showHostGameDialog(BuildContext context) {
+    final sessionNameController = TextEditingController();
+    final playerNameController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(feature),
-        content: Text('$feature feature is coming soon!\n\nThis is a demo of the multi-platform responsive UI.'),
+        title: const Text('Host New Game'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: sessionNameController,
+              decoration: const InputDecoration(
+                labelText: 'Session Name',
+                hintText: 'My Detective Session',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: playerNameController,
+              decoration: const InputDecoration(
+                labelText: 'Your Name',
+                hintText: 'Detective Name',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final sessionName = sessionNameController.text.trim();
+              final playerName = playerNameController.text.trim();
+              
+              if (sessionName.isNotEmpty && playerName.isNotEmpty) {
+                context.read<NetworkBloc>().add(ServerStarted(
+                  sessionName: sessionName,
+                  hostPlayerName: playerName,
+                ));
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Start Server'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerManagementDialog(BuildContext context, NetworkState networkState) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Game Server'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Session: ${networkState.sessionName}'),
+            Text('Host: ${networkState.hostPlayerName}'),
+            Text('Port: ${networkState.serverPort}'),
+            Text('Connected Players: ${networkState.connectedPlayers}'),
+            const SizedBox(height: 16),
+            const Text('Server is running and accepting connections.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<NetworkBloc>().add(const ServerStopped());
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Stop Server'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinGameDialog(BuildContext context, NetworkState networkState) {
+    showDialog(
+      context: context,
+      builder: (context) => BlocBuilder<NetworkBloc, NetworkState>(
+        builder: (context, state) => AlertDialog(
+          title: const Text('Join Game'),
+          content: SizedBox(
+            width: 300,
+            height: 400,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Available Sessions (${state.availableSessions.length}):'),
+                const SizedBox(height: 16),
+                if (state.isDiscovering)
+                  const Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Searching for sessions...'),
+                      ],
+                    ),
+                  )
+                else if (state.availableSessions.isEmpty)
+                  const Center(
+                    child: Text('No sessions found.\nMake sure you\'re on the same network.'),
+                  )
+                else
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: state.availableSessions.length,
+                      itemBuilder: (context, index) {
+                        final session = state.availableSessions[index];
+                        return Card(
+                          child: ListTile(
+                            title: Text(session.sessionName),
+                            subtitle: Text('Host: ${session.hostName}\n'
+                                '${session.currentPlayers}/${session.maxPlayers} players'),
+                            trailing: ElevatedButton(
+                              onPressed: () {
+                                // TODO: Implement join session
+                                Navigator.of(context).pop();
+                                _showDialog(context, 'Join Session', 
+                                    'Joining "${session.sessionName}" coming soon!');
+                              },
+                              child: const Text('Join'),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                context.read<NetworkBloc>().add(const DiscoveryStopped());
+                Navigator.of(context).pop();
+              },
+              child: const Text('Close'),
+            ),
+            if (!state.isDiscovering)
+              ElevatedButton(
+                onPressed: () {
+                  context.read<NetworkBloc>().add(const DiscoveryStarted());
+                },
+                child: const Text('Refresh'),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDialog(BuildContext context, String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

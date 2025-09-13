@@ -35,10 +35,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   material_design_icons_flutter: ^7.0.7296
   
-  # State Management
-  provider: ^6.1.2
-  riverpod: ^2.6.1
-  flutter_riverpod: ^2.6.1
+  # State Management (BLoC Pattern)
+  flutter_bloc: ^8.1.6
+  bloc: ^8.1.4
+  equatable: ^2.0.5
+  hydrated_bloc: ^9.1.5
   
   # Networking for multiplayer
   shelf: ^1.4.2
@@ -85,6 +86,7 @@ dev_dependencies:
   
   # Testing
   mockito: ^5.4.4
+  bloc_test: ^9.1.7
   integration_test:
     sdk: flutter
 
