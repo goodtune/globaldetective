@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Interactive Globe - Global Detective{% endblock %}
+
+{% block extra_css %}
+<style>
+  .country-card {
+    transition: transform 0.2s;
+  }
+  .country-card:hover {
+    transform: translateY(-2px);
+  }
+  .landmark-badge {
+    font-size: 0.8em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🌍 Interactive Globe</h1>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <p class="lead">Explore countries and landmarks around the world. Click on any country to learn more about its culture, history, and famous landmarks.</p>
+  </div>
+</div>
+
+<div class="row">
+  {% for country in countries %}
+    <div class="col-lg-4 col-md-6 mb-4">
+      <div class="card country-card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">{{ country.common_name }}</h5>
+          <span class="badge bg-primary">{{ country.continent }}</span>
+        </div>
+        <div class="card-body">
+          <p class="card-text">
+            <strong>Capital:</strong> {{ country.capital|default:"Unknown" }}<br>
+            <strong>Currency:</strong> {{ country.currency|default:"Unknown" }}<br>
+            <strong>Cities:</strong> {{ country.city_set.count }}
+          </p>
+          
+          {% if country.geography %}
+            <p class="small text-muted">{{ country.geography|truncatewords:15 }}</p>
+          {% endif %}
+          
+          <div class="mb-2">
+            {% for landmark in landmarks %}
+              {% if landmark.city.country == country %}
+                <span class="badge bg-secondary landmark-badge me-1">{{ landmark.name }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          
+          <a href="{% url 'games:country_detail' country.code %}" class="btn btn-outline-primary">Explore {{ country.common_name }}</a>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="alert alert-info">
+        No countries available. <a href="{% url 'admin:index' %}">Add some countries</a> to get started!
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h5>🗺️ Travel Tips</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <h6>🛫 Transportation</h6>
+            <ul class="small">
+              <li><strong>Direct Flight:</strong> Fastest but most expensive</li>
+              <li><strong>Connecting Flight:</strong> Moderate cost and time</li>
+              <li><strong>Train/Ship:</strong> Slower but cheaper options</li>
+            </ul>
+          </div>
+          <div class="col-md-6">
+            <h6>🔍 Investigation Tips</h6>
+            <ul class="small">
+              <li><strong>Visit Landmarks:</strong> Gather cultural clues</li>
+              <li><strong>Research History:</strong> Understand local context</li>
+              <li><strong>Track Expenses:</strong> Manage your budget wisely</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

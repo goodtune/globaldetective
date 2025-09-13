@@ -29,6 +29,10 @@ class Country(models.Model):
         null=True,
         help_text="Type of government",
     )
+    capital = models.CharField(max_length=100, blank=True, null=True)
+    continent = models.CharField(max_length=50, blank=True, null=True)
+    coordinates_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    coordinates_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -41,6 +45,10 @@ class Country(models.Model):
 class City(models.Model):
     name = models.CharField(max_length=100)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    is_capital = models.BooleanField(default=False)
+    population = models.PositiveIntegerField(null=True, blank=True)
+    coordinates_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    coordinates_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     def __str__(self):
         return self.name

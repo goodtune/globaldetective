@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "places",
     "dossiers",
     "factbook",
+    "games",
 ]
 
 MIDDLEWARE = [

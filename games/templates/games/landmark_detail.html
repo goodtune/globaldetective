@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ landmark.name }} - Global Detective{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'games:globe' %}">Globe</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'games:country_detail' landmark.city.country.code %}">{{ landmark.city.country.common_name }}</a></li>
+        <li class="breadcrumb-item active">{{ landmark.name }}</li>
+      </ol>
+    </nav>
+    
+    <h1>🏛️ {{ landmark.name }}</h1>
+    <h2 class="text-muted mb-4">{{ landmark.city.name }}, {{ landmark.city.country.common_name }}</h2>
+    
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5>Description</h5>
+        <p class="lead">{{ landmark.description }}</p>
+        
+        {% if landmark.cultural_significance %}
+          <h5 class="mt-4">Cultural Significance</h5>
+          <p>{{ landmark.cultural_significance }}</p>
+        {% endif %}
+        
+        {% if landmark.coordinates_lat and landmark.coordinates_lng %}
+          <h5 class="mt-4">Location</h5>
+          <p><strong>Coordinates:</strong> {{ landmark.coordinates_lat }}, {{ landmark.coordinates_lng }}</p>
+          <p><strong>City:</strong> {{ landmark.city.name }}</p>
+          <p><strong>Country:</strong> {{ landmark.city.country.common_name }}</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if landmark.image_url %}
+      <div class="card mb-4">
+        <img src="{{ landmark.image_url }}" class="card-img-top" alt="{{ landmark.name }}">
+        <div class="card-body">
+          <p class="card-text text-muted">{{ landmark.name }} in {{ landmark.city.name }}</p>
+        </div>
+      </div>
+    {% endif %}
+    
+    <div class="card">
+      <div class="card-header">
+        <h5>🔍 Detective Information</h5>
+      </div>
+      <div class="card-body">
+        <p>This landmark could be significant to your investigation. Consider:</p>
+        <ul>
+          <li>What cultural or historical clues might be found here?</li>
+          <li>Why might a criminal choose this location?</li>
+          <li>What makes this place unique to {{ landmark.city.country.common_name }}?</li>
+          <li>Are there any connections to other countries or landmarks?</li>
+        </ul>
+        
+        <div class="alert alert-info">
+          <strong>💡 Tip:</strong> Look for patterns in the landmarks visited by suspects. Cultural preferences often reveal travel patterns!
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5>🗒️ Clue Notes</h5>
+      </div>
+      <div class="card-body">
+        <p class="small">Record any clues you discover at this landmark:</p>
+        <textarea class="form-control" rows="5" placeholder="What did you learn here?"></textarea>
+        <button class="btn btn-outline-primary btn-sm mt-2" onclick="alert('Clue recording functionality coming soon!')">Record Clue</button>
+      </div>
+    </div>
+    
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5>📍 Nearby Landmarks</h5>
+      </div>
+      <div class="card-body">
+        {% for nearby in landmark.city.landmarks.all %}
+          {% if nearby != landmark %}
+            <div class="mb-2">
+              <a href="{% url 'games:landmark_detail' nearby.id %}" class="text-decoration-none">
+                <strong>{{ nearby.name }}</strong>
+              </a>
+              <p class="small text-muted mb-0">{{ nearby.description|truncatewords:10 }}</p>
+            </div>
+          {% endif %}
+        {% empty %}
+          <p class="text-muted">No other landmarks in {{ landmark.city.name }} available.</p>
+        {% endfor %}
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5>🧭 Navigation</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{% url 'games:country_detail' landmark.city.country.code %}" class="btn btn-outline-primary btn-sm">🏳️ Back to {{ landmark.city.country.common_name }}</a>
+          <a href="{% url 'games:globe' %}" class="btn btn-outline-secondary btn-sm">🌍 View Globe</a>
+          <a href="{% url 'games:index' %}" class="btn btn-outline-info btn-sm">🎮 Game Lobby</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

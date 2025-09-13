@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ country.common_name }} - Global Detective{% endblock %}
+
+{% block extra_css %}
+<style>
+  .landmark-card {
+    transition: transform 0.2s;
+  }
+  .landmark-card:hover {
+    transform: translateY(-2px);
+  }
+  .flag-color {
+    display: inline-block;
+    width: 20px;
+    height: 15px;
+    margin-right: 5px;
+    border: 1px solid #ddd;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1>🌍 {{ country.common_name }}</h1>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'games:globe' %}">Globe</a></li>
+          <li class="breadcrumb-item active">{{ country.common_name }}</li>
+        </ol>
+      </nav>
+    </div>
+    
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5>Country Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Official Name:</strong> {{ country.name }}</p>
+            <p><strong>Capital:</strong> {{ country.capital|default:"Unknown" }}</p>
+            <p><strong>Continent:</strong> {{ country.continent|default:"Unknown" }}</p>
+            <p><strong>Currency:</strong> {{ country.currency|default:"Unknown" }}</p>
+            {% if country.coordinates_lat and country.coordinates_lng %}
+              <p><strong>Coordinates:</strong> {{ country.coordinates_lat }}, {{ country.coordinates_lng }}</p>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            {% if country.flag_colours.all %}
+              <p><strong>Flag Colors:</strong>
+                {% for color in country.flag_colours.all %}
+                  <span class="flag-color" style="background-color: {{ color.colour|lower }}" title="{{ color.colour }}"></span>
+                {% endfor %}
+              </p>
+            {% endif %}
+            <p><strong>Government:</strong> {{ country.government|default:"Unknown" }}</p>
+            <p><strong>Cities:</strong> {{ cities.count }}</p>
+          </div>
+        </div>
+        
+        {% if country.geography %}
+          <h6 class="mt-3">Geography</h6>
+          <p>{{ country.geography }}</p>
+        {% endif %}
+        
+        {% if country.history %}
+          <h6 class="mt-3">History</h6>
+          <p>{{ country.history }}</p>
+        {% endif %}
+        
+        {% if country.exports %}
+          <h6 class="mt-3">Major Exports</h6>
+          <p>{{ country.exports }}</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <h3>🏛️ Famous Landmarks</h3>
+    {% if landmarks %}
+      <div class="row">
+        {% for landmark in landmarks %}
+          <div class="col-md-6 mb-3">
+            <div class="card landmark-card h-100">
+              <div class="card-body">
+                <h5 class="card-title">{{ landmark.name }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ landmark.city.name }}</h6>
+                <p class="card-text">{{ landmark.description }}</p>
+                {% if landmark.cultural_significance %}
+                  <p class="small text-info"><strong>Cultural Significance:</strong> {{ landmark.cultural_significance }}</p>
+                {% endif %}
+                <a href="{% url 'games:landmark_detail' landmark.id %}" class="btn btn-outline-primary btn-sm">Learn More</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        No landmarks available for {{ country.common_name }} yet.
+      </div>
+    {% endif %}
+    
+    <h3 class="mt-4">🏙️ Cities</h3>
+    {% if cities %}
+      <div class="row">
+        {% for city in cities %}
+          <div class="col-md-4 mb-3">
+            <div class="card">
+              <div class="card-body">
+                <h6 class="card-title">
+                  {{ city.name }}
+                  {% if city.is_capital %}
+                    <span class="badge bg-warning text-dark">Capital</span>
+                  {% endif %}
+                </h6>
+                {% if city.population %}
+                  <p class="card-text"><strong>Population:</strong> {{ city.population|floatformat:0 }}</p>
+                {% endif %}
+                {% if city.coordinates_lat and city.coordinates_lng %}
+                  <p class="card-text small text-muted">{{ city.coordinates_lat }}, {{ city.coordinates_lng }}</p>
+                {% endif %}
+                <p class="card-text small">{{ city.landmarks.count }} landmark{{ city.landmarks.count|pluralize }}</p>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        No cities available for {{ country.common_name }} yet.
+      </div>
+    {% endif %}
+  </div>
+  
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5>🔍 Investigation Notes</h5>
+      </div>
+      <div class="card-body">
+        <p class="small">Take notes about this country for your investigation:</p>
+        <textarea class="form-control" rows="4" placeholder="Your detective notes..."></textarea>
+        <button class="btn btn-outline-primary btn-sm mt-2" onclick="alert('Notebook functionality coming soon!')">Save Notes</button>
+      </div>
+    </div>
+    
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5>🛫 Travel Options</h5>
+      </div>
+      <div class="card-body">
+        <p class="small">Plan your next move:</p>
+        <div class="d-grid gap-2">
+          <button class="btn btn-outline-success btn-sm" onclick="alert('Travel functionality coming soon!')">✈️ Direct Flight ($800-1200)</button>
+          <button class="btn btn-outline-info btn-sm" onclick="alert('Travel functionality coming soon!')">🔄 Connecting Flight ($500-800)</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="alert('Travel functionality coming soon!')">🚂 Train/Ship ($200-600)</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="card-header">
+        <h5>📚 Quick Links</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{% url 'games:globe' %}" class="btn btn-outline-primary btn-sm">🌍 Back to Globe</a>
+          <a href="{% url 'dossiers:index' %}" class="btn btn-outline-secondary btn-sm">📁 View Suspects</a>
+          <a href="{% url 'factbook:index' %}" class="btn btn-outline-info btn-sm">📚 World Fact Book</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
