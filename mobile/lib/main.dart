@@ -11,6 +11,8 @@ import 'shared/blocs/app_bloc_observer.dart';
 import 'features/ui/screens/splash_screen.dart';
 import 'features/game/blocs/game_state/game_state_bloc.dart';
 import 'features/game/blocs/case_management/case_management_bloc.dart';
+import 'features/game/services/case_data_service.dart';
+import 'features/game/services/location_data_service.dart';
 import 'features/networking/blocs/network_bloc.dart';
 
 void main() async {
@@ -26,6 +28,19 @@ void main() async {
   
   // Set up BLoC observer for debugging
   Bloc.observer = AppBlocObserver();
+  
+  // Initialize game data services
+  try {
+    LocationDataService.instance.initialize();
+    print('LocationDataService initialized with ${LocationDataService.instance.getAllLocations().length} locations');
+    
+    CaseDataService.instance.initialize();
+    print('CaseDataService initialized successfully');
+  } catch (e, stackTrace) {
+    print('Error initializing game services: $e');
+    print('Stack trace: $stackTrace');
+    rethrow;
+  }
   
   runApp(const GlobalDetectiveApp());
 }

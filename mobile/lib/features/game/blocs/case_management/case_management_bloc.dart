@@ -21,9 +21,6 @@ class CaseManagementBloc extends HydratedBloc<CaseManagementEvent, CaseManagemen
   })  : _caseDataService = caseDataService ?? CaseDataService.instance,
         _locationDataService = locationDataService ?? LocationDataService.instance,
         super(const CaseManagementState()) {
-    // Initialize the services if not already initialized
-    _caseDataService.initialize();
-    _locationDataService.initialize();
     on<CaseStarted>(_onCaseStarted);
     on<ClueAttempted>(_onClueAttempted);
     on<LocationChanged>(_onLocationChanged);

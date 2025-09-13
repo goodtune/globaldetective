@@ -19,6 +19,11 @@ class LocationDataService {
 
     _loadInitialLocations();
     _loadInitialLandmarks();
+    
+    // Verify initialization completed
+    if (_locations.isEmpty) {
+      throw StateError('Failed to load locations during initialization');
+    }
   }
 
   void _loadInitialLocations() {
