@@ -37,13 +37,21 @@ class CaseManagementBloc extends HydratedBloc<CaseManagementEvent, CaseManagemen
     try {
       emit(state.copyWith(status: CaseManagementStatus.loading));
 
+      // Ensure both services are initialized
+      if (!_caseDataService.isInitialized) {
+        _caseDataService.initialize();
+      }
+      if (!_locationDataService.isInitialized) {
+        _locationDataService.initialize();
+      }
+
       final detectiveCase = _caseDataService.generateRandomCase(event.difficulty);
       final startLocation = _locationDataService.getLocationById(detectiveCase.startLocationId);
 
       if (startLocation == null) {
         emit(state.copyWith(
           status: CaseManagementStatus.error,
-          errorMessage: 'Could not find starting location',
+          errorMessage: 'Could not find starting location: ${detectiveCase.startLocationId}',
         ));
         return;
       }

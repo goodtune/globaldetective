@@ -220,6 +220,16 @@ class CaseDataService {
   }
 
   DetectiveCase generateRandomCase(CaseDifficulty difficulty) {
+    if (!isInitialized) {
+      initialize();
+    }
+    
+    // Ensure location service is also initialized
+    final locationService = LocationDataService.instance;
+    if (!locationService.isInitialized) {
+      locationService.initialize();
+    }
+    
     return _generateCase(difficulty);
   }
 
@@ -228,10 +238,21 @@ class CaseDataService {
     final artifact = _getRandomArtifact();
     final locations = LocationDataService.instance.getAllLocations();
     
+    if (locations.isEmpty) {
+      throw StateError('No locations available. LocationDataService not properly initialized.');
+    }
+    
     // Select locations based on villain preferences and random selection
     final possibleLocations = _selectPossibleLocations(villain, locations, difficulty);
+    
+    if (possibleLocations.isEmpty) {
+      throw StateError('No possible locations selected for case generation.');
+    }
+    
     final startLocation = possibleLocations.first;
-    final correctLocation = possibleLocations[1 + _random.nextInt(possibleLocations.length - 1)];
+    final correctLocation = possibleLocations.length > 1 
+        ? possibleLocations[1 + _random.nextInt(possibleLocations.length - 1)]
+        : possibleLocations.first;
     
     // Generate clues for each location
     final locationClues = <String, List<Clue>>{};
@@ -264,10 +285,19 @@ class CaseDataService {
   }
 
   Villain _getRandomVillain(CaseDifficulty difficulty) {
+    if (_villains.isEmpty) {
+      throw StateError('Villains not initialized. Call initialize() first.');
+    }
+    
     final villainDifficulty = _mapCaseDifficultyToVillain(difficulty);
     final suitableVillains = _villains.where((v) => 
         _getDifficultyOrder(v.difficulty) <= _getDifficultyOrder(villainDifficulty)
     ).toList();
+    
+    if (suitableVillains.isEmpty) {
+      // Fallback to any villain if no suitable ones found
+      return _villains[_random.nextInt(_villains.length)];
+    }
     
     return suitableVillains[_random.nextInt(suitableVillains.length)];
   }
@@ -295,6 +325,9 @@ class CaseDataService {
   }
 
   StolenArtifact _getRandomArtifact() {
+    if (_artifacts.isEmpty) {
+      throw StateError('Artifacts not initialized. Call initialize() first.');
+    }
     return _artifacts[_random.nextInt(_artifacts.length)];
   }
 
