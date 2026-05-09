@@ -2,4 +2,6 @@
 *.pyc
 *.sqlite3
 /.env
+/.env.compose
 /.venv
+/.superpowers/
