@@ -7,15 +7,15 @@
     <div class="col-md-8 col-lg-6">
 
       <div class="text-center mb-4">
-        <h1 class="display-5 fw-bold">Global Detective Quest</h1>
-        <p class="lead text-muted">A master criminal is on the run. Track them down before time runs out.</p>
+        <h1 class="display-5 fw-bold" style="font-family:'Special Elite',serif;color:#ffc107">Global Detective Quest</h1>
+        <p class="lead" style="color:#8b92a5">A master criminal is on the run. Track them down before time runs out.</p>
       </div>
 
       {% if has_active_game %}
         <div class="card border-warning mb-4">
-          <div class="card-body text-center">
-            <h5 class="card-title">Case In Progress</h5>
-            <p class="card-text text-muted">You have an active case. Resume the investigation or abandon it for a new one.</p>
+          <div class="card-body text-center py-4">
+            <h5 class="card-title mb-1" style="color:#ffc107">🔍 Case In Progress</h5>
+            <p class="mb-3" style="color:#8b92a5">You have an active investigation.</p>
             <a href="{% url 'game:case' %}" class="btn btn-warning btn-lg me-2">Resume Case</a>
             <form method="post" action="{% url 'game:new' %}" class="d-inline">
               {% csrf_token %}
@@ -25,18 +25,18 @@
         </div>
       {% else %}
         <div class="card mb-4">
+          <div class="card-header">How to Play</div>
           <div class="card-body">
-            <h5 class="card-title">How to Play</h5>
-            <ul class="mb-3">
-              <li>Visit locations and speak to witnesses — some know something, some don't</li>
-              <li>Use the <strong>Factbook</strong> tab to identify your next destination from travel clues</li>
-              <li>Check the <strong>Suspects</strong> tab to cross-reference traits with your clues</li>
-              <li>Issue a warrant once you've identified the culprit, then make the arrest</li>
-              <li>You have <strong>7 days</strong> — every action costs time</li>
+            <ul class="mb-3" style="color:#8b92a5">
+              <li>Investigate locations — Library &amp; Market use witness interviews</li>
+              <li><strong style="color:#dde1ea">Police Station</strong>: crack the evidence safe 🔒</li>
+              <li><strong style="color:#dde1ea">Airport</strong>: intercept the frequency channel 📡</li>
+              <li>Use the <strong style="color:#dde1ea">Factbook</strong> tab to match travel clues to countries</li>
+              <li>Issue a warrant, then make the arrest — you have <strong style="color:#dde1ea">7 days</strong></li>
             </ul>
             <form method="post" action="{% url 'game:new' %}">
               {% csrf_token %}
-              <button type="submit" class="btn btn-primary btn-lg w-100">Start New Case</button>
+              <button type="submit" class="btn btn-warning btn-lg w-100">Start New Case</button>
             </form>
           </div>
         </div>

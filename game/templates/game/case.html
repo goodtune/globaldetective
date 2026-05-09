@@ -4,39 +4,67 @@
 
 {% block extra_css %}
 <style>
-  .location-btn { min-height: 72px; }
-  .witness-btn  { min-height: 80px; }
-  .clue-item    { border-left: 3px solid #ffc107; padding-left: .6rem; margin-bottom: .5rem; font-size: .875rem; }
-  .country-row  { font-size: .8rem; border-bottom: 1px solid #dee2e6; padding: .4rem 0; }
-  .country-row:last-child { border-bottom: none; }
-  .suspect-row  { font-size: .8rem; border-bottom: 1px solid #dee2e6; padding: .4rem 0; }
+  .top-bar        { background: var(--gd-darker); border: 1px solid var(--gd-border); border-radius: .6rem; padding: .8rem 1.2rem; margin-bottom: 1.5rem; }
+  .top-bar-label  { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gd-muted); }
+  .top-bar-value  { font-size: 1rem; font-weight: 700; color: var(--gd-text); }
+  .section-label  { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gd-muted); margin-bottom: .6rem; }
+  .loc-btn        { background: var(--gd-surface); border: 1px solid var(--gd-border); border-radius: .5rem;
+                    color: var(--gd-text); text-align: left; padding: .7rem .9rem; width: 100%;
+                    transition: background .15s, border-color .15s; min-height: 72px; }
+  .loc-btn:hover:not(:disabled) { background: #232a3e; border-color: var(--gd-gold); color: #fff; }
+  .loc-btn:disabled { opacity: .38; cursor: not-allowed; }
+  .loc-btn .loc-icon { font-size: 1.3rem; display: block; }
+  .loc-btn .loc-name { font-weight: 600; font-size: .9rem; }
+  .loc-btn .loc-cost { font-size: .75rem; color: var(--gd-muted); }
+  .travel-btn     { background: #0d1520; border: 1px solid #1e3a5f; border-radius: .5rem;
+                    color: #93c5fd; width: 100%; padding: .8rem .5rem;
+                    transition: background .15s, border-color .15s; }
+  .travel-btn:hover { background: #132040; border-color: #3b82f6; color: #bfdbfe; }
+  .witness-btn    { background: var(--gd-surface); border: 1px solid var(--gd-border); border-radius: .5rem;
+                    color: var(--gd-text); width: 100%; padding: .7rem .5rem; min-height: 80px;
+                    transition: background .15s, border-color .15s; }
+  .witness-btn:hover { background: #232a3e; border-color: var(--gd-gold); }
+  .clue-item      { border-left: 3px solid var(--gd-gold); background: rgba(255,193,7,.07);
+                    padding: .4rem .7rem; margin-bottom: .4rem; font-size: .85rem;
+                    border-radius: 0 .3rem .3rem 0; color: var(--gd-text); }
+  .suspect-row    { border-bottom: 1px solid var(--gd-border); padding: .5rem 0; }
   .suspect-row:last-child { border-bottom: none; }
-  .trait-badge  { font-size: .7rem; padding: .15rem .4rem; }
-  .nav-tabs .nav-link { font-size: .8rem; padding: .4rem .7rem; }
-  #right-panel  { position: sticky; top: 1rem; }
+  .trait-badge    { font-size: .65rem; padding: .12rem .4rem; background: var(--gd-border) !important; color: var(--gd-muted) !important; border: 1px solid #3a4050; }
+  .country-row    { border-bottom: 1px solid var(--gd-border); padding: .45rem 0; font-size: .78rem; }
+  .country-row:last-child { border-bottom: none; }
+  .nav-tabs       { border-bottom: 1px solid var(--gd-border); }
+  .nav-tabs .nav-link { font-size: .78rem; padding: .4rem .7rem; color: var(--gd-muted);
+                        border-color: transparent; background: none; }
+  .nav-tabs .nav-link.active { color: var(--gd-gold); border-color: var(--gd-border) var(--gd-border) var(--gd-surface);
+                               background: var(--gd-surface); }
+  .tab-content    { background: var(--gd-surface); border: 1px solid var(--gd-border); border-top: none;
+                    border-radius: 0 0 .5rem .5rem; }
+  #right-panel    { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+  .warrant-select { background: var(--gd-dark) !important; border-color: var(--gd-border) !important; color: var(--gd-text) !important; }
+  .warrant-select:focus { border-color: var(--gd-gold) !important; box-shadow: 0 0 0 .2rem rgba(255,193,7,.2) !important; }
 </style>
 {% endblock %}
 
 {% block content %}
 
   {# Top bar #}
-  <div class="d-flex justify-content-between align-items-center bg-dark text-white rounded p-3 mb-4">
+  <div class="top-bar d-flex justify-content-between align-items-center">
     <div>
-      <small class="text-white-50 d-block">Stop {{ stop_num }} of {{ trail_total }}</small>
-      <strong class="fs-6">{{ current_country.common_name }}</strong>
+      <div class="top-bar-label">Stop {{ stop_num }} of {{ trail_total }}</div>
+      <div class="top-bar-value">📍 {{ current_country.common_name }}</div>
     </div>
     <div class="text-center">
-      <small class="text-white-50 d-block">Time Remaining</small>
-      <strong class="fs-5 {% if game.time_remaining <= 12 %}text-danger{% else %}text-warning{% endif %}">
+      <div class="top-bar-label">Time Remaining</div>
+      <div class="top-bar-value {% if game.time_remaining <= 12 %}text-danger{% else %}text-warning{% endif %}">
         {{ time_display }}
-      </strong>
+      </div>
     </div>
     <div class="text-end">
-      <small class="text-white-50 d-block">Warrant</small>
+      <div class="top-bar-label">Warrant</div>
       {% if warrant_suspect %}
-        <strong class="text-success">{{ warrant_suspect.name }}</strong>
+        <div class="top-bar-value text-success">{{ warrant_suspect.name }}</div>
       {% else %}
-        <span class="text-white-50">None issued</span>
+        <div style="color:#4a5060;font-size:.9rem">None issued</div>
       {% endif %}
     </div>
   </div>
@@ -72,8 +100,8 @@
               <form method="post" action="{% url 'game:speak' %}">
                 {% csrf_token %}
                 <input type="hidden" name="witness_name" value="{{ witness }}">
-                <button type="submit" class="btn btn-outline-warning w-100 witness-btn">
-                  👤<br><span class="fw-semibold">{{ witness }}</span>
+                <button type="submit" class="witness-btn">
+                  👤<br><span class="fw-semibold" style="font-size:.85rem">{{ witness }}</span>
                 </button>
               </form>
             </div>
@@ -91,13 +119,13 @@
                 {% csrf_token %}
                 <input type="hidden" name="location" value="{{ loc.key }}">
                 <button type="submit"
-                  class="btn btn-outline-secondary w-100 text-start location-btn {% if not loc.available %}disabled{% endif %}"
+                  class="loc-btn {% if not loc.available %}disabled{% endif %}"
                   {% if not loc.available %}disabled{% endif %}>
-                  <span class="fs-5">{{ loc.icon }}</span>
-                  <span class="ms-1 fw-semibold">{{ loc.name }}</span><br>
-                  <small class="text-muted">
+                  <span class="loc-icon">{{ loc.icon }}</span>
+                  <span class="loc-name">{{ loc.name }}</span><br>
+                  <span class="loc-cost">
                     {% if loc.available %}{{ loc.cost }}h per conversation{% else %}No leads here{% endif %}
-                  </small>
+                  </span>
                 </button>
               </form>
             </div>
@@ -114,9 +142,9 @@
                 <form method="post" action="{% url 'game:travel' %}">
                   {% csrf_token %}
                   <input type="hidden" name="country_id" value="{{ country.pk }}">
-                  <button type="submit" class="btn btn-outline-primary w-100 py-3">
-                    <div class="fw-semibold">{{ country.common_name }}</div>
-                    <small class="text-muted">6h flight</small>
+                  <button type="submit" class="travel-btn">
+                    <div class="fw-semibold" style="font-size:.875rem">{{ country.common_name }}</div>
+                    <small style="color:var(--gd-muted)">✈ 6h flight</small>
                   </button>
                 </form>
               </div>
@@ -164,7 +192,7 @@
           <form method="post" action="{% url 'game:warrant' %}" class="mb-2">
             {% csrf_token %}
             <label class="form-label small fw-semibold">Issue Warrant</label>
-            <select name="suspect_id" class="form-select form-select-sm mb-2">
+            <select name="suspect_id" class="form-select form-select-sm mb-2 warrant-select">
               <option value="">— Select a suspect —</option>
               {% for s in suspects %}
                 <option value="{{ s.pk }}" {% if warrant_suspect and warrant_suspect.pk == s.pk %}selected{% endif %}>
@@ -196,7 +224,7 @@
                      alt="{{ s.name }}" width="40" height="40"
                      style="object-fit:cover;border-radius:4px;flex-shrink:0">
               {% else %}
-                <div style="width:40px;height:40px;background:#dee2e6;border-radius:4px;flex-shrink:0"></div>
+                <div style="width:40px;height:40px;background:var(--gd-border);border-radius:4px;flex-shrink:0"></div>
               {% endif %}
               <div>
                 <div class="fw-semibold" style="font-size:.85rem">{{ s.name }}</div>

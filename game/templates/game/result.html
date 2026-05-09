@@ -4,8 +4,12 @@
 
 {% block extra_css %}
 <style>
-  .trail-arrow { color: #adb5bd; margin: 0 .4rem; }
-  .clue-result { border-left: 3px solid #ffc107; padding-left: .6rem; margin-bottom: .4rem; font-size: .9rem; }
+  .trail-arrow  { color: #4a5060; margin: 0 .4rem; }
+  .clue-result  { border-left: 3px solid #ffc107; background: rgba(255,193,7,.07);
+                  padding: .4rem .7rem; margin-bottom: .4rem; font-size: .88rem;
+                  border-radius: 0 .3rem .3rem 0; }
+  .outcome-won  { background: rgba(40,167,69,.12); border: 1px solid rgba(40,167,69,.3); border-radius: .6rem; }
+  .outcome-lost { background: rgba(220,53,69,.12); border: 1px solid rgba(220,53,69,.3); border-radius: .6rem; }
 </style>
 {% endblock %}
 
@@ -14,32 +18,29 @@
     <div class="col-lg-8">
 
       {% if game.status == 'won' %}
-        <div class="alert alert-success text-center py-4 mb-4">
-          <h2 class="alert-heading mb-1">Case Solved!</h2>
-          <p class="mb-0 lead">You tracked down and arrested <strong>{{ suspect.name }}</strong>.</p>
-          {% if time_display %}
-            <small class="text-muted">Time remaining: {{ time_display }}</small>
-          {% endif %}
+        <div class="p-4 mb-4 text-center outcome-won">
+          <h2 class="mb-1" style="color:#28a745;font-family:'Special Elite',serif">Case Solved!</h2>
+          <p class="mb-1 lead" style="color:#dde1ea">You tracked down and arrested <strong>{{ suspect.name }}</strong>.</p>
+          {% if time_display %}<small style="color:#8b92a5">Time remaining: {{ time_display }}</small>{% endif %}
         </div>
       {% else %}
-        <div class="alert alert-danger text-center py-4 mb-4">
-          <h2 class="alert-heading mb-1">Case Failed</h2>
+        <div class="p-4 mb-4 text-center outcome-lost">
+          <h2 class="mb-1" style="color:#dc3545;font-family:'Special Elite',serif">Case Failed</h2>
           {% if game.time_remaining <= 0 %}
-            <p class="mb-0 lead">You ran out of time. <strong>{{ suspect.name }}</strong> escaped.</p>
+            <p class="mb-1 lead" style="color:#dde1ea">You ran out of time. <strong>{{ suspect.name }}</strong> escaped.</p>
           {% else %}
-            <p class="mb-0 lead">Wrong arrest. The real culprit was <strong>{{ suspect.name }}</strong>.</p>
+            <p class="mb-1 lead" style="color:#dde1ea">Wrong arrest. The real culprit was <strong>{{ suspect.name }}</strong>.</p>
           {% endif %}
           {% if warrant_suspect and warrant_suspect.pk != suspect.pk %}
-            <small class="text-muted">You had a warrant for {{ warrant_suspect.name }}.</small>
+            <small style="color:#8b92a5">You had a warrant for {{ warrant_suspect.name }}.</small>
           {% endif %}
         </div>
       {% endif %}
 
       <div class="row g-3 mb-4">
-
         <div class="col-md-6">
           <div class="card h-100">
-            <div class="card-header fw-semibold">The Culprit's Trail</div>
+            <div class="card-header">The Culprit's Trail</div>
             <div class="card-body">
               {% if trail %}
                 <div class="d-flex flex-wrap align-items-center gap-1">
@@ -49,7 +50,7 @@
                   {% endfor %}
                 </div>
               {% else %}
-                <p class="text-muted mb-0">Trail unavailable.</p>
+                <p style="color:#8b92a5" class="mb-0">Trail unavailable.</p>
               {% endif %}
             </div>
           </div>
@@ -57,25 +58,24 @@
 
         <div class="col-md-6">
           <div class="card h-100">
-            <div class="card-header fw-semibold">Clues Collected</div>
+            <div class="card-header">Clues Collected</div>
             <div class="card-body">
               {% if game.clues_seen %}
                 {% for clue in game.clues_seen %}
                   <div class="clue-result">{{ clue }}</div>
                 {% endfor %}
               {% else %}
-                <p class="text-muted mb-0">No clues collected.</p>
+                <p style="color:#8b92a5" class="mb-0">No clues collected.</p>
               {% endif %}
             </div>
           </div>
         </div>
-
       </div>
 
       <div class="d-flex gap-2">
         <form method="post" action="{% url 'game:new' %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn-primary">Play Again</button>
+          <button type="submit" class="btn btn-warning">Play Again</button>
         </form>
         <a href="{% url 'index' %}" class="btn btn-outline-secondary">Home</a>
       </div>
