@@ -24,4 +24,5 @@ urlpatterns = [
     path("", index, name="index"),
     path("world-factbook/", include("factbook.urls")),
     path("dossiers/", include("dossiers.urls")),
+    path("game/", include("game.urls")),
 ]
