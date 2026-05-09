@@ -100,3 +100,267 @@ class CluesForStopTest(TestCase):
         s = make_suspect()
         result = clues_for_stop(s, None)
         self.assertEqual(result["travel"], [])
+
+
+from unittest.mock import patch
+
+from game.logic import (
+    FLIGHT_COST,
+    LOCATION_WITNESSES,
+    WRONG_FLIGHT_PENALTY,
+    do_arrest,
+    do_investigate,
+    do_speak,
+    do_travel,
+    do_warrant,
+    format_time,
+    generate_case,
+)
+
+
+def make_game(suspect, trail):
+    """Build a minimal valid game dict for testing."""
+    from game.clues import clues_for_stop
+    clues_available = {}
+    for i, country in enumerate(trail):
+        next_country = trail[i + 1] if i < len(trail) - 1 else None
+        clues_available[str(i)] = clues_for_stop(suspect, next_country)
+    return {
+        "suspect_id": suspect.pk,
+        "trail": [c.pk for c in trail],
+        "current_stop": 0,
+        "clues_seen": [],
+        "clues_available": clues_available,
+        "active_location": None,
+        "last_witness_result": None,
+        "time_remaining": 168,
+        "warrant_suspect_id": None,
+        "status": "active",
+    }
+
+
+class FormatTimeTest(TestCase):
+    def test_days_and_hours(self):
+        self.assertEqual(format_time(53), "2 days, 5h")
+
+    def test_exact_days(self):
+        self.assertEqual(format_time(48), "2 days")
+
+    def test_hours_only(self):
+        self.assertEqual(format_time(5), "5h")
+
+    def test_one_day(self):
+        self.assertEqual(format_time(24), "1 day")
+
+    def test_one_day_and_hours(self):
+        self.assertEqual(format_time(25), "1 day, 1h")
+
+
+class GenerateCaseTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def test_returns_valid_shape(self):
+        game = generate_case()
+        self.assertIn("suspect_id", game)
+        self.assertIn("trail", game)
+        self.assertIn("clues_available", game)
+        self.assertIn("active_location", game)
+        self.assertIn("last_witness_result", game)
+        self.assertEqual(game["status"], "active")
+        self.assertEqual(game["time_remaining"], 168)
+        self.assertIsNone(game["active_location"])
+
+    def test_trail_length_between_3_and_5(self):
+        for _ in range(10):
+            game = generate_case()
+            self.assertGreaterEqual(len(game["trail"]), 3)
+            self.assertLessEqual(len(game["trail"]), 5)
+
+    def test_clues_keyed_per_stop(self):
+        game = generate_case()
+        for i in range(len(game["trail"])):
+            self.assertIn(str(i), game["clues_available"])
+            stop = game["clues_available"][str(i)]
+            self.assertIn("suspect", stop)
+            self.assertIn("travel", stop)
+
+    def test_final_stop_has_no_travel_clues(self):
+        game = generate_case()
+        last = str(len(game["trail"]) - 1)
+        self.assertEqual(game["clues_available"][last]["travel"], [])
+
+
+class DoInvestigateTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_sets_active_location(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_investigate(game, "library")
+        self.assertEqual(result["active_location"], "library")
+
+    def test_no_time_deducted(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_investigate(game, "library")
+        self.assertEqual(result["time_remaining"], 168)
+
+    def test_clears_last_witness_result(self):
+        game = make_game(self.suspect, self.countries)
+        game["last_witness_result"] = {"witness": "Someone", "clue": "clue"}
+        result = do_investigate(game, "library")
+        self.assertIsNone(result["last_witness_result"])
+
+    def test_does_not_mutate_original(self):
+        game = make_game(self.suspect, self.countries)
+        do_investigate(game, "police")
+        self.assertIsNone(game["active_location"])
+
+
+class DoSpeakTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_deducts_time_for_police(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "police", "Officer")
+        self.assertEqual(result["time_remaining"], 168 - 3)
+
+    def test_deducts_time_for_library(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "library", "Librarian")
+        self.assertEqual(result["time_remaining"], 168 - 2)
+
+    def test_sets_last_witness_result(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "police", "Officer")
+        self.assertIsNotNone(result["last_witness_result"])
+        self.assertEqual(result["last_witness_result"]["witness"], "Officer")
+
+    def test_clue_revealed_when_lucky(self):
+        game = make_game(self.suspect, self.countries)
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.1
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNotNone(result["last_witness_result"]["clue"])
+        self.assertEqual(len(result["clues_seen"]), 1)
+
+    def test_no_clue_when_unlucky(self):
+        game = make_game(self.suspect, self.countries)
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.9
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["last_witness_result"]["clue"])
+        self.assertEqual(len(result["clues_seen"]), 0)
+
+    def test_no_clue_when_pool_empty(self):
+        game = make_game(self.suspect, self.countries)
+        game["clues_available"]["0"]["suspect"] = []
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.1
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["last_witness_result"]["clue"])
+
+    def test_clears_active_location(self):
+        game = make_game(self.suspect, self.countries)
+        game["active_location"] = "police"
+        result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["active_location"])
+
+    def test_time_zero_sets_lost(self):
+        game = make_game(self.suspect, self.countries)
+        game["time_remaining"] = 1
+        result = do_speak(game, "police", "Officer")
+        self.assertEqual(result["status"], "lost")
+
+    def test_does_not_mutate_original(self):
+        game = make_game(self.suspect, self.countries)
+        original_time = game["time_remaining"]
+        do_speak(game, "police", "Officer")
+        self.assertEqual(game["time_remaining"], original_time)
+
+
+class DoTravelTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_correct_country_advances_stop(self):
+        game = make_game(self.suspect, self.countries)
+        correct_pk = self.countries[1].pk
+        result = do_travel(game, correct_pk)
+        self.assertEqual(result["current_stop"], 1)
+
+    def test_correct_country_deducts_flight_cost(self):
+        game = make_game(self.suspect, self.countries)
+        correct_pk = self.countries[1].pk
+        result = do_travel(game, correct_pk)
+        self.assertEqual(result["time_remaining"], 168 - FLIGHT_COST)
+
+    def test_wrong_country_deducts_penalty(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_travel(game, 99999)
+        self.assertEqual(result["time_remaining"], 168 - WRONG_FLIGHT_PENALTY)
+
+    def test_wrong_country_does_not_advance_stop(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_travel(game, 99999)
+        self.assertEqual(result["current_stop"], 0)
+
+    def test_at_final_stop_does_nothing(self):
+        game = make_game(self.suspect, self.countries)
+        game["current_stop"] = 2
+        result = do_travel(game, self.countries[0].pk)
+        self.assertEqual(result["current_stop"], 2)
+        self.assertEqual(result["time_remaining"], 168)
+
+    def test_time_zero_sets_lost(self):
+        game = make_game(self.suspect, self.countries)
+        game["time_remaining"] = 1
+        result = do_travel(game, 99999)
+        self.assertEqual(result["status"], "lost")
+
+
+class DoWarrantTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_sets_warrant_suspect_id(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_warrant(game, self.suspect.pk)
+        self.assertEqual(result["warrant_suspect_id"], self.suspect.pk)
+
+    def test_can_change_warrant(self):
+        game = make_game(self.suspect, self.countries)
+        other = make_suspect(name="Other", sex="MALE")
+        game["warrant_suspect_id"] = other.pk
+        result = do_warrant(game, self.suspect.pk)
+        self.assertEqual(result["warrant_suspect_id"], self.suspect.pk)
+
+
+class DoArrestTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_correct_warrant_wins(self):
+        game = make_game(self.suspect, self.countries)
+        game["warrant_suspect_id"] = self.suspect.pk
+        result = do_arrest(game)
+        self.assertEqual(result["status"], "won")
+
+    def test_wrong_warrant_loses(self):
+        game = make_game(self.suspect, self.countries)
+        game["warrant_suspect_id"] = 99999
+        result = do_arrest(game)
+        self.assertEqual(result["status"], "lost")
+
+
+class LocationWitnessesTest(TestCase):
+    def test_all_locations_have_three_witnesses(self):
+        for location in ("library", "police", "airport", "market"):
+            self.assertEqual(len(LOCATION_WITNESSES[location]), 3)
