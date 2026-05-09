@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  {% if minigame_type == 'safe' %}Crack the Safe{% else %}Frequency Intercept{% endif %}
+  — Global Detective
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .puzzle-card   { max-width: 520px; margin: 0 auto; }
+  .status-badge  { font-size: .75rem; letter-spacing:.05em; text-transform:uppercase; }
+
+  /* safe cracker */
+  .combo-row     { display: flex; justify-content: center; gap: 1.5rem; margin: 1.5rem 0; }
+  .drum-wrap     { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+  .drum          { width: 72px; height: 80px; background: #1a1a2e; border: 2px solid #444;
+                   border-radius: 6px; display: flex; align-items: center; justify-content: center;
+                   font-size: 2.4rem; font-weight: 700; color: #ffc107;
+                   font-family: 'Courier New', monospace; transition: border-color .2s, box-shadow .2s; }
+  .drum.matched  { border-color: #28a745; box-shadow: 0 0 12px rgba(40,167,69,.5); color: #28a745; }
+  .drum-btn      { width: 72px; padding: .15rem 0; font-size: 1.1rem;
+                   background: #2a2a3e; border: 1px solid #555; color: #ccc; border-radius: 4px;
+                   cursor: pointer; transition: background .15s; }
+  .drum-btn:hover { background: #3a3a5e; color: #fff; }
+  .waveform      { display: flex; align-items: flex-end; justify-content: center;
+                   gap: 3px; height: 40px; margin-bottom: 1rem; }
+  .waveform .bar { width: 6px; background: #ffc107; border-radius: 2px; opacity: .3;
+                   transition: height .15s, opacity .15s; }
+
+  /* frequency tuner */
+  .spectrum      { background: #0a0a1a; border-radius: 6px; height: 80px; position: relative;
+                   overflow: hidden; margin-bottom: 1rem; border: 1px solid #333; }
+  .spectrum canvas { display:block; width:100%; height:100%; }
+  .tuner-row     { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+  .freq-slider   { flex: 1; accent-color: #ffc107; }
+  .freq-readout  { min-width: 90px; text-align: right; font-family: 'Courier New', monospace;
+                   font-size: 1.1rem; color: #ffc107; font-weight: 700; }
+  .sig-meter     { height: 12px; background: #1a1a2e; border-radius: 6px; overflow: hidden;
+                   border: 1px solid #333; margin-bottom: .5rem; }
+  .sig-fill      { height: 100%; width: 0%; background: #ffc107;
+                   border-radius: 6px; transition: width .1s, background .2s; }
+  .sig-fill.locked { background: #28a745; }
+  .sig-label     { font-size: .8rem; text-align: center; color: #adb5bd; margin-bottom: 1rem; }
+  .sig-label.locked { color: #28a745; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center bg-dark text-white rounded p-3 mb-4">
+    <div>
+      {% if minigame_type == 'safe' %}
+        <strong>🔒 Police Station — Evidence Safe</strong>
+      {% else %}
+        <strong>📡 Airport — Intercept Channel</strong>
+      {% endif %}
+    </div>
+    <div class="text-end">
+      <small class="text-white-50 d-block">Time Remaining</small>
+      <strong class="text-warning">{{ time_display }}</strong>
+    </div>
+  </div>
+
+  <div class="puzzle-card">
+    <div class="card border-0 shadow-sm" style="background:#111827;color:#e5e7eb">
+
+      {% if minigame_type == 'safe' %}
+
+        <div class="card-body text-center">
+          <p class="text-muted small mb-1 status-badge">🎧 Listening Device Active</p>
+          <p class="mb-3" style="font-size:.9rem">Rotate each tumbler to find the combination.<br>
+            The indicator lights up when a digit locks in.</p>
+
+          <div class="waveform" id="waveform">
+            {% for i in "123456789012345678901234" %}
+              <div class="bar" style="height:{% cycle '8' '14' '6' '20' '10' '16' '8' '22' '12' '6' '18' '14' '24' '8' '16' '10' '20' '6' '18' '14' '8' '12' '20' '16' %}px"></div>
+            {% endfor %}
+          </div>
+
+          <div class="combo-row">
+            {% for i in "012" %}
+              <div class="drum-wrap">
+                <button class="drum-btn" type="button" onclick="spin({{ i }},1)">&#9650;</button>
+                <div class="drum" id="drum-{{ i }}">0</div>
+                <button class="drum-btn" type="button" onclick="spin({{ i }},-1)">&#9660;</button>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card-footer border-top border-secondary bg-transparent d-flex gap-2 p-3">
+          <form method="post" class="flex-grow-1" id="safe-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="solve">
+            <input type="hidden" name="d0" id="inp0" value="0">
+            <input type="hidden" name="d1" id="inp1" value="0">
+            <input type="hidden" name="d2" id="inp2" value="0">
+            <button type="submit" id="crack-btn" class="btn btn-warning w-100" disabled>
+              Try Combination
+            </button>
+          </form>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="skip">
+            <button type="submit" class="btn btn-outline-secondary">Skip</button>
+          </form>
+        </div>
+
+        <script>
+        const CORRECT = {{ answer|safe }};
+        const vals = [0, 0, 0];
+
+        function spin(w, d) {
+          vals[w] = (vals[w] + d + 10) % 10;
+          const drum = document.getElementById('drum-' + w);
+          drum.textContent = vals[w];
+          drum.classList.toggle('matched', vals[w] === CORRECT[w]);
+          document.getElementById('inp' + w).value = vals[w];
+          updateWaveform();
+          const allMatch = vals.every((v, i) => v === CORRECT[i]);
+          const btn = document.getElementById('crack-btn');
+          btn.disabled = !allMatch;
+          btn.textContent = allMatch ? '🔓 CRACKED — Submit' : 'Try Combination';
+          if (allMatch) btn.classList.replace('btn-warning', 'btn-success');
+          else btn.classList.replace('btn-success', 'btn-warning');
+        }
+
+        function updateWaveform() {
+          const matchCount = vals.filter((v, i) => v === CORRECT[i]).length;
+          const bars = document.querySelectorAll('#waveform .bar');
+          bars.forEach((b, idx) => {
+            const base = parseInt(b.style.height);
+            const boost = matchCount * 8;
+            b.style.height = (base + boost * (Math.sin(idx * 0.8) * 0.5 + 0.5)) + 'px';
+            b.style.opacity = 0.3 + matchCount * 0.23;
+          });
+        }
+        </script>
+
+      {% else %}
+
+        <div class="card-body">
+          <p class="text-muted small mb-1 status-badge text-center">📻 Scanning Frequencies</p>
+          <p class="text-center mb-3" style="font-size:.9rem">
+            Tune the dial to isolate the signal.<br>When the meter locks — the channel is live.
+          </p>
+
+          <div class="spectrum mb-3">
+            <canvas id="spectrum-canvas"></canvas>
+          </div>
+
+          <div class="tuner-row">
+            <span class="text-muted small">88.0</span>
+            <input type="range" class="freq-slider" id="freq-slider" min="100" max="900" value="500" step="1">
+            <span class="text-muted small">108.0</span>
+            <div class="freq-readout" id="freq-readout">500.0 MHz</div>
+          </div>
+
+          <div class="sig-meter"><div class="sig-fill" id="sig-fill"></div></div>
+          <div class="sig-label" id="sig-label">Scanning...</div>
+        </div>
+
+        <div class="card-footer border-top border-secondary bg-transparent d-flex gap-2 p-3">
+          <form method="post" class="flex-grow-1" id="freq-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="solve">
+            <input type="hidden" name="freq" id="inp-freq" value="500">
+            <button type="submit" id="lock-btn" class="btn btn-warning w-100" disabled>
+              Lock On
+            </button>
+          </form>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="skip">
+            <button type="submit" class="btn btn-outline-secondary">Skip</button>
+          </form>
+        </div>
+
+        <script>
+        const TARGET = {{ answer }};
+        const TOLS = 20;
+
+        const canvas = document.getElementById('spectrum-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+          canvas.width = canvas.offsetWidth;
+          canvas.height = canvas.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let currentSliderVal = 500;
+
+        function drawSpectrum(currentVal) {
+          const W = canvas.width, H = canvas.height;
+          if (!W || !H) return;
+          ctx.clearRect(0, 0, W, H);
+          ctx.fillStyle = '#0a0a1a';
+          ctx.fillRect(0, 0, W, H);
+
+          const diff = Math.abs(currentVal - TARGET);
+          const strength = Math.max(0, 1 - diff / 150);
+
+          for (let x = 0; x < W; x += 3) {
+            const pos = Math.round((x / W) * 800 + 100);
+            const noise = Math.random() * 0.15;
+            const signal = Math.exp(-Math.pow((pos - TARGET) / 30, 2)) * strength;
+            const h = (noise + signal) * H * 0.85;
+            const green = Math.round(signal * 255);
+            ctx.fillStyle = 'rgb(' + Math.round(255 - green * 0.8) + ',' + Math.round(180 + green * 0.3) + ',' + Math.round(7 + green * 0.5) + ')';
+            ctx.fillRect(x, H - h, 2, h);
+          }
+
+          const cx = Math.round(((currentVal - 100) / 800) * W);
+          ctx.strokeStyle = 'rgba(255,193,7,0.8)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(cx, 0);
+          ctx.lineTo(cx, H);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        function animate() {
+          drawSpectrum(currentSliderVal);
+          requestAnimationFrame(animate);
+        }
+        animate();
+
+        document.getElementById('freq-slider').addEventListener('input', function() {
+          currentSliderVal = parseInt(this.value);
+          const mhz = (currentSliderVal / 10).toFixed(1);
+          document.getElementById('freq-readout').textContent = mhz + ' MHz';
+          document.getElementById('inp-freq').value = currentSliderVal;
+
+          const diff = Math.abs(currentSliderVal - TARGET);
+          const strength = Math.max(0, 1 - diff / 150);
+          const fill = document.getElementById('sig-fill');
+          const label = document.getElementById('sig-label');
+          const btn = document.getElementById('lock-btn');
+          const locked = diff <= TOLS;
+
+          fill.style.width = (strength * 100) + '%';
+          fill.classList.toggle('locked', locked);
+          label.textContent = locked ? '📡 LOCKED ON — Ready to intercept' : 'Scanning...';
+          label.classList.toggle('locked', locked);
+          btn.disabled = !locked;
+          if (locked) btn.classList.replace('btn-warning', 'btn-success');
+          else btn.classList.replace('btn-success', 'btn-warning');
+        });
+        </script>
+
+      {% endif %}
+
+    </div>
+  </div>
+
+{% endblock %}

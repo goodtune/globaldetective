@@ -7,8 +7,10 @@ from places.models import Country
 from game.logic import (
     LOCATION_CLUE_TYPE,
     LOCATION_WITNESSES,
+    MINIGAME_LOCATIONS,
     do_arrest,
     do_investigate,
+    do_minigame,
     do_speak,
     do_travel,
     do_warrant,
@@ -103,7 +105,51 @@ def investigate(request):
         return redirect("game:case")
     request.session["game"] = do_investigate(game, location)
     request.session.modified = True
+    if MINIGAME_LOCATIONS.get(location):
+        return redirect("game:minigame")
     return redirect("game:case")
+
+
+def minigame(request):
+    game = request.session.get("game")
+    if not game or game["status"] != "active":
+        return redirect("game:index")
+
+    minigame_type = game.get("active_minigame")
+    if not minigame_type:
+        return redirect("game:case")
+
+    if request.method == "POST":
+        action = request.POST.get("action", "skip")
+        solved = False
+        if action == "solve":
+            answer = game.get("minigame_answer")
+            if minigame_type == "safe":
+                try:
+                    user = [int(request.POST.get(f"d{i}", -1)) for i in range(3)]
+                    solved = user == answer
+                except (ValueError, TypeError):
+                    solved = False
+            elif minigame_type == "frequency":
+                try:
+                    user_freq = int(request.POST.get("freq", -1))
+                    solved = abs(user_freq - answer) <= 20
+                except (ValueError, TypeError):
+                    solved = False
+
+        request.session["game"] = do_minigame(game, solved)
+        request.session.modified = True
+        if request.session["game"]["status"] == "lost":
+            return redirect("game:result")
+        return redirect("game:case")
+
+    context = {
+        "game": game,
+        "minigame_type": minigame_type,
+        "answer": game.get("minigame_answer"),
+        "time_display": format_time(game["time_remaining"]),
+    }
+    return render(request, "game/minigame.html", context)
 
 
 def speak(request):

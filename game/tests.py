@@ -1,6 +1,7 @@
 import copy
 
 from django.test import TestCase
+from django.urls import reverse
 
 from criminals.models import Suspect
 from places.models import Country, FlagColour
@@ -532,9 +533,14 @@ class InvestigateViewTest(TestCase):
         game = self.client.session["game"]
         self.assertEqual(game["time_remaining"], 168)
 
-    def test_post_redirects_to_case(self):
+    def test_post_police_redirects_to_minigame(self):
         self._start_game()
         response = self.client.post("/game/investigate/", {"location": "police"})
+        self.assertRedirects(response, "/game/minigame/")
+
+    def test_post_library_redirects_to_case(self):
+        self._start_game()
+        response = self.client.post("/game/investigate/", {"location": "library"})
         self.assertRedirects(response, "/game/case/")
 
     def test_post_invalid_location_redirects_to_case(self):
@@ -697,3 +703,69 @@ class ResultViewTest(TestCase):
     def test_no_game_redirects_to_index(self):
         response = self.client.get("/game/result/")
         self.assertRedirects(response, "/game/")
+
+
+class MinigameViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.c1 = make_country("VA")
+        self.c2 = make_country("VB")
+        game = {
+            "suspect_id": self.suspect.pk,
+            "trail": [self.c1.pk, self.c2.pk],
+            "current_stop": 0,
+            "clues_seen": [],
+            "clues_available": {
+                "0": {
+                    "suspect": [{"text": "S clue", "type": "suspect"}],
+                    "travel": [{"text": "T clue", "type": "travel"}],
+                },
+                "1": {"suspect": [], "travel": []},
+            },
+            "active_location": "police",
+            "active_minigame": "safe",
+            "minigame_answer": [3, 7, 1],
+            "last_witness_result": None,
+            "time_remaining": 100,
+            "warrant_suspect_id": None,
+            "status": "active",
+        }
+        session = self.client.session
+        session["game"] = game
+        session.save()
+
+    def test_get_renders_minigame(self):
+        resp = self.client.get(reverse("game:minigame"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "safe")
+
+    def test_skip_redirects_to_case(self):
+        resp = self.client.post(
+            reverse("game:minigame"), {"action": "skip"}, follow=False
+        )
+        self.assertRedirects(resp, reverse("game:case"))
+
+    def test_correct_safe_combo_grants_clue(self):
+        self.client.post(
+            reverse("game:minigame"),
+            {"action": "solve", "d0": "3", "d1": "7", "d2": "1"},
+            follow=False,
+        )
+        game = self.client.session["game"]
+        self.assertEqual(len(game["clues_seen"]), 1)
+
+    def test_wrong_safe_combo_no_clue(self):
+        self.client.post(
+            reverse("game:minigame"),
+            {"action": "solve", "d0": "0", "d1": "0", "d2": "0"},
+            follow=False,
+        )
+        game = self.client.session["game"]
+        self.assertEqual(len(game["clues_seen"]), 0)
+
+    def test_no_active_minigame_redirects_to_case(self):
+        session = self.client.session
+        session["game"]["active_minigame"] = None
+        session.save()
+        resp = self.client.get(reverse("game:minigame"))
+        self.assertRedirects(resp, reverse("game:case"))
