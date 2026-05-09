@@ -1,0 +1,207 @@
+[
+  {"model": "places.flagcolour", "pk": "red", "fields": {}},
+  {"model": "places.flagcolour", "pk": "white", "fields": {}},
+  {"model": "places.flagcolour", "pk": "blue", "fields": {}},
+  {"model": "places.flagcolour", "pk": "green", "fields": {}},
+  {"model": "places.flagcolour", "pk": "yellow", "fields": {}},
+  {"model": "places.flagcolour", "pk": "black", "fields": {}},
+  {"model": "places.flagcolour", "pk": "orange", "fields": {}},
+  {"model": "places.flagcolour", "pk": "gold", "fields": {}},
+
+  {"model": "places.country", "pk": 1, "fields": {
+    "name": "French Republic", "common_name": "France", "code": "FR",
+    "currency": "Euro",
+    "exports": "wine, cheese, aircraft, luxury goods",
+    "geography": "the Alps, the Loire Valley, and the Seine river",
+    "fauna": "red foxes and wild boar",
+    "flora": "lavender and sunflowers",
+    "flag_colours": ["red", "white", "blue"]
+  }},
+  {"model": "places.country", "pk": 2, "fields": {
+    "name": "Federative Republic of Brazil", "common_name": "Brazil", "code": "BR",
+    "currency": "Real",
+    "exports": "coffee, soybeans, iron ore, orange juice",
+    "geography": "the Amazon rainforest and the Pantanal wetlands",
+    "fauna": "jaguars, macaws, and capybaras",
+    "flora": "Brazil nut trees and Victoria water lilies",
+    "flag_colours": ["green", "yellow", "blue", "white"]
+  }},
+  {"model": "places.country", "pk": 3, "fields": {
+    "name": "Japan", "common_name": "Japan", "code": "JP",
+    "currency": "Yen",
+    "exports": "cars, electronics, steel, robots",
+    "geography": "Mount Fuji and the Japanese Alps",
+    "fauna": "Japanese macaques and red-crowned cranes",
+    "flora": "cherry blossoms and bamboo",
+    "flag_colours": ["red", "white"]
+  }},
+  {"model": "places.country", "pk": 4, "fields": {
+    "name": "Commonwealth of Australia", "common_name": "Australia", "code": "AU",
+    "currency": "Australian Dollar",
+    "exports": "iron ore, coal, wool, gold",
+    "geography": "the Great Barrier Reef and the Outback",
+    "fauna": "kangaroos, koalas, and platypuses",
+    "flora": "eucalyptus and acacia",
+    "flag_colours": ["red", "white", "blue"]
+  }},
+  {"model": "places.country", "pk": 5, "fields": {
+    "name": "Arab Republic of Egypt", "common_name": "Egypt", "code": "EG",
+    "currency": "Egyptian Pound",
+    "exports": "cotton, petroleum products, citrus fruits",
+    "geography": "the Nile river, the Sahara Desert, and the pyramids",
+    "fauna": "camels, Nile crocodiles, and sacred ibis",
+    "flora": "papyrus and date palms",
+    "flag_colours": ["red", "white", "black"]
+  }},
+  {"model": "places.country", "pk": 6, "fields": {
+    "name": "United Mexican States", "common_name": "Mexico", "code": "MX",
+    "currency": "Mexican Peso",
+    "exports": "avocados, silver, crude oil, vehicles",
+    "geography": "the Sierra Madre mountains and the Yucatan Peninsula",
+    "fauna": "monarch butterflies, jaguars, and axolotls",
+    "flora": "agave and dahlia",
+    "flag_colours": ["green", "white", "red"]
+  }},
+  {"model": "places.country", "pk": 7, "fields": {
+    "name": "Republic of India", "common_name": "India", "code": "IN",
+    "currency": "Indian Rupee",
+    "exports": "spices, cotton, tea, software",
+    "geography": "the Himalayas, the Ganges river, and the Thar Desert",
+    "fauna": "Bengal tigers, Asian elephants, and peacocks",
+    "flora": "lotus and teak",
+    "flag_colours": ["orange", "white", "green"]
+  }},
+  {"model": "places.country", "pk": 8, "fields": {
+    "name": "Republic of Kenya", "common_name": "Kenya", "code": "KE",
+    "currency": "Kenyan Shilling",
+    "exports": "tea, coffee, cut flowers, horticulture",
+    "geography": "the Great Rift Valley and Mount Kenya",
+    "fauna": "lions, elephants, and flamingos",
+    "flora": "acacia trees and protea",
+    "flag_colours": ["red", "white", "green", "black"]
+  }},
+  {"model": "places.country", "pk": 9, "fields": {
+    "name": "Argentine Republic", "common_name": "Argentina", "code": "AR",
+    "currency": "Argentine Peso",
+    "exports": "beef, soybeans, wine, sunflower oil",
+    "geography": "the Andes mountains and the Pampas grasslands",
+    "fauna": "condors, pumas, and giant anteaters",
+    "flora": "Patagonian cypress and ceibo",
+    "flag_colours": ["blue", "white"]
+  }},
+  {"model": "places.country", "pk": 10, "fields": {
+    "name": "Federal Republic of Germany", "common_name": "Germany", "code": "DE",
+    "currency": "Euro",
+    "exports": "cars, machinery, chemicals, pharmaceuticals",
+    "geography": "the Black Forest, the Rhine river, and the Bavarian Alps",
+    "fauna": "red deer, wild boar, and European lynx",
+    "flora": "oak and lime trees",
+    "flag_colours": ["black", "red", "gold"]
+  }},
+  {"model": "places.country", "pk": 11, "fields": {
+    "name": "Russian Federation", "common_name": "Russia", "code": "RU",
+    "currency": "Russian Ruble",
+    "exports": "oil, natural gas, steel, weapons",
+    "geography": "Siberia, Lake Baikal, and the Ural Mountains",
+    "fauna": "Siberian tigers, brown bears, and snow leopards",
+    "flora": "Siberian pine and birch",
+    "flag_colours": ["white", "blue", "red"]
+  }},
+  {"model": "places.country", "pk": 12, "fields": {
+    "name": "Canada", "common_name": "Canada", "code": "CA",
+    "currency": "Canadian Dollar",
+    "exports": "timber, oil sands, wheat, maple syrup",
+    "geography": "the Rocky Mountains, Niagara Falls, and the Arctic tundra",
+    "fauna": "beavers, moose, and polar bears",
+    "flora": "maple trees and Canadian wild rice",
+    "flag_colours": ["red", "white"]
+  }},
+  {"model": "places.country", "pk": 13, "fields": {
+    "name": "Kingdom of Morocco", "common_name": "Morocco", "code": "MA",
+    "currency": "Moroccan Dirham",
+    "exports": "phosphate, citrus fruits, fish, argan oil",
+    "geography": "the Atlas Mountains and the Sahara Desert",
+    "fauna": "Barbary macaques and fennec foxes",
+    "flora": "argan trees and rose bushes",
+    "flag_colours": ["red", "green"]
+  }},
+  {"model": "places.country", "pk": 14, "fields": {
+    "name": "Republic of Peru", "common_name": "Peru", "code": "PE",
+    "currency": "Peruvian Sol",
+    "exports": "copper, gold, fishmeal, asparagus",
+    "geography": "Machu Picchu, the Andes, and the Amazon basin",
+    "fauna": "llamas, spectacled bears, and Andean condors",
+    "flora": "orchids and cinchona trees",
+    "flag_colours": ["red", "white"]
+  }},
+  {"model": "places.country", "pk": 15, "fields": {
+    "name": "Kingdom of Sweden", "common_name": "Sweden", "code": "SE",
+    "currency": "Swedish Krona",
+    "exports": "paper, iron ore, cars, telecommunications equipment",
+    "geography": "fjords, archipelagos, and the Scandinavian Mountains",
+    "fauna": "moose, wolverines, and Arctic foxes",
+    "flora": "spruce forests and lingonberry",
+    "flag_colours": ["blue", "yellow"]
+  }},
+
+  {"model": "criminals.suspect", "pk": 1, "fields": {
+    "name": "Carmen Sandiego",
+    "sex": "FEMALE", "hair": "RED", "hobby": "SKYDIVE",
+    "feature": "SCAR", "auto": "LIMO", "food": "SEAFOOD",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 2, "fields": {
+    "name": "Dazzle Annie",
+    "sex": "FEMALE", "hair": "BLONDE", "hobby": "MUSIC",
+    "feature": "JEWELERY", "auto": "CONVERTIBLE", "food": "SEAFOOD",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 3, "fields": {
+    "name": "Fast Eddie B",
+    "sex": "MALE", "hair": "BLACK", "hobby": "TENNIS",
+    "feature": "RING", "auto": "RACECAR", "food": "MEXICAN",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 4, "fields": {
+    "name": "Ihor Ihorovich",
+    "sex": "MALE", "hair": "BROWN", "hobby": "CLIMBING",
+    "feature": "TATTOO", "auto": "MOTORBIKE", "food": "SEAFOOD",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 5, "fields": {
+    "name": "Katherine Drib",
+    "sex": "FEMALE", "hair": "BROWN", "hobby": "CROQUET",
+    "feature": "LIMP", "auto": "LIMO", "food": "MEXICAN",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 6, "fields": {
+    "name": "Lady Agatha",
+    "sex": "FEMALE", "hair": "GREY", "hobby": "SWIMMING",
+    "feature": "JEWELERY", "auto": "LIMO", "food": "SEAFOOD",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 7, "fields": {
+    "name": "Len Bulk",
+    "sex": "MALE", "hair": "BROWN", "hobby": "CLIMBING",
+    "feature": "SCAR", "auto": "LIMO", "food": "MEXICAN",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 8, "fields": {
+    "name": "Mary LeRoc",
+    "sex": "FEMALE", "hair": "BLACK", "hobby": "MUSIC",
+    "feature": "TATTOO", "auto": "MOTORBIKE", "food": "SEAFOOD",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 9, "fields": {
+    "name": "Nick Brunch",
+    "sex": "MALE", "hair": "BLONDE", "hobby": "TENNIS",
+    "feature": "RING", "auto": "CONVERTIBLE", "food": "MEXICAN",
+    "has_picture": true
+  }},
+  {"model": "criminals.suspect", "pk": 10, "fields": {
+    "name": "Scar Graynold",
+    "sex": "MALE", "hair": "GREY", "hobby": "SKYDIVE",
+    "feature": "SCAR", "auto": "RACECAR", "food": "SEAFOOD",
+    "has_picture": true
+  }}
+]

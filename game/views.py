@@ -27,7 +27,9 @@ VALID_LOCATIONS = {loc["key"] for loc in LOCATION_META}
 
 
 def index(request):
-    return render(request, "game/index.html")
+    game = request.session.get("game")
+    has_active_game = bool(game and game.get("status") == "active")
+    return render(request, "game/index.html", {"has_active_game": has_active_game})
 
 
 def new_case(request):
@@ -70,16 +72,22 @@ def case(request):
     active_location = game.get("active_location")
     witnesses = LOCATION_WITNESSES.get(active_location, []) if active_location else []
 
+    suspects = list(Suspect.objects.order_by("name"))
+    all_countries = list(Country.objects.prefetch_related("flag_colours").order_by("common_name"))
+
     context = {
         "game": game,
         "current_country": current_country,
         "locations": locations,
         "travel_options": travel_options,
-        "suspects": Suspect.objects.order_by("name"),
+        "suspects": suspects,
         "warrant_suspect": warrant_suspect,
         "active_location": active_location,
         "witnesses": witnesses,
         "time_display": format_time(game["time_remaining"]),
+        "stop_num": game["current_stop"] + 1,
+        "trail_total": len(game["trail"]),
+        "all_countries": all_countries,
     }
     return render(request, "game/case.html", context)
 
@@ -167,9 +175,14 @@ def result(request):
     warrant_suspect = None
     if game["warrant_suspect_id"]:
         warrant_suspect = Suspect.objects.filter(pk=game["warrant_suspect_id"]).first()
+    trail_countries = list(Country.objects.filter(pk__in=game["trail"]))
+    trail_by_pk = {c.pk: c for c in trail_countries}
+    trail_ordered = [trail_by_pk[pk] for pk in game["trail"] if pk in trail_by_pk]
     context = {
         "game": game,
         "suspect": suspect,
         "warrant_suspect": warrant_suspect,
+        "trail": trail_ordered,
+        "time_display": format_time(max(game["time_remaining"], 0)),
     }
     return render(request, "game/result.html", context)

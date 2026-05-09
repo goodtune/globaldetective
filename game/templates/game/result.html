@@ -2,36 +2,84 @@
 
 {% block title %}Case {% if game.status == 'won' %}Solved{% else %}Failed{% endif %}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .trail-arrow { color: #adb5bd; margin: 0 .4rem; }
+  .clue-result { border-left: 3px solid #ffc107; padding-left: .6rem; margin-bottom: .4rem; font-size: .9rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-  {% if game.status == 'won' %}
-    <h1 class="text-success mb-3">Case Solved!</h1>
-    <p class="lead">You correctly identified and arrested <strong>{{ suspect.name }}</strong>.</p>
-  {% else %}
-    <h1 class="text-danger mb-3">Case Failed</h1>
-    {% if game.time_remaining <= 0 %}
-      <p class="lead">You ran out of time. The criminal escaped.</p>
-    {% else %}
-      <p class="lead">Wrong arrest. The real culprit was <strong>{{ suspect.name }}</strong>.</p>
-    {% endif %}
-    {% if warrant_suspect and warrant_suspect.pk != suspect.pk %}
-      <p>You had a warrant for <strong>{{ warrant_suspect.name }}</strong>.</p>
-    {% endif %}
-  {% endif %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
 
-  <p class="mt-3"><strong>Clues you collected:</strong></p>
-  {% if game.clues_seen %}
-    <ul>
-      {% for clue in game.clues_seen %}
-        <li>{{ clue }}</li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="text-muted">No clues collected.</p>
-  {% endif %}
+      {% if game.status == 'won' %}
+        <div class="alert alert-success text-center py-4 mb-4">
+          <h2 class="alert-heading mb-1">Case Solved!</h2>
+          <p class="mb-0 lead">You tracked down and arrested <strong>{{ suspect.name }}</strong>.</p>
+          {% if time_display %}
+            <small class="text-muted">Time remaining: {{ time_display }}</small>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="alert alert-danger text-center py-4 mb-4">
+          <h2 class="alert-heading mb-1">Case Failed</h2>
+          {% if game.time_remaining <= 0 %}
+            <p class="mb-0 lead">You ran out of time. <strong>{{ suspect.name }}</strong> escaped.</p>
+          {% else %}
+            <p class="mb-0 lead">Wrong arrest. The real culprit was <strong>{{ suspect.name }}</strong>.</p>
+          {% endif %}
+          {% if warrant_suspect and warrant_suspect.pk != suspect.pk %}
+            <small class="text-muted">You had a warrant for {{ warrant_suspect.name }}.</small>
+          {% endif %}
+        </div>
+      {% endif %}
 
-  <form method="post" action="{% url 'game:new' %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-primary mt-3">Play Again</button>
-  </form>
-  <a href="{% url 'index' %}" class="btn btn-secondary mt-3 ms-2">Home</a>
+      <div class="row g-3 mb-4">
+
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header fw-semibold">The Culprit's Trail</div>
+            <div class="card-body">
+              {% if trail %}
+                <div class="d-flex flex-wrap align-items-center gap-1">
+                  {% for country in trail %}
+                    <span class="badge bg-{% if game.status == 'won' %}success{% else %}danger{% endif %}">{{ country.common_name }}</span>
+                    {% if not forloop.last %}<span class="trail-arrow">→</span>{% endif %}
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted mb-0">Trail unavailable.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header fw-semibold">Clues Collected</div>
+            <div class="card-body">
+              {% if game.clues_seen %}
+                {% for clue in game.clues_seen %}
+                  <div class="clue-result">{{ clue }}</div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted mb-0">No clues collected.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="d-flex gap-2">
+        <form method="post" action="{% url 'game:new' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Play Again</button>
+        </form>
+        <a href="{% url 'index' %}" class="btn btn-outline-secondary">Home</a>
+      </div>
+
+    </div>
+  </div>
 {% endblock %}

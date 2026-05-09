@@ -2,90 +2,101 @@
 
 {% block title %}Active Case — {{ current_country.common_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  .location-btn { min-height: 72px; }
+  .witness-btn  { min-height: 80px; }
+  .clue-item    { border-left: 3px solid #ffc107; padding-left: .6rem; margin-bottom: .5rem; font-size: .875rem; }
+  .country-row  { font-size: .8rem; border-bottom: 1px solid #dee2e6; padding: .4rem 0; }
+  .country-row:last-child { border-bottom: none; }
+  .suspect-row  { font-size: .8rem; border-bottom: 1px solid #dee2e6; padding: .4rem 0; }
+  .suspect-row:last-child { border-bottom: none; }
+  .trait-badge  { font-size: .7rem; padding: .15rem .4rem; }
+  .nav-tabs .nav-link { font-size: .8rem; padding: .4rem .7rem; }
+  #right-panel  { position: sticky; top: 1rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 
   {# Top bar #}
   <div class="d-flex justify-content-between align-items-center bg-dark text-white rounded p-3 mb-4">
     <div>
-      <small class="text-muted d-block">Current Location</small>
-      <strong>{{ current_country.common_name }}</strong>
+      <small class="text-white-50 d-block">Stop {{ stop_num }} of {{ trail_total }}</small>
+      <strong class="fs-6">{{ current_country.common_name }}</strong>
     </div>
     <div class="text-center">
-      <small class="text-muted d-block">Time Remaining</small>
+      <small class="text-white-50 d-block">Time Remaining</small>
       <strong class="fs-5 {% if game.time_remaining <= 12 %}text-danger{% else %}text-warning{% endif %}">
         {{ time_display }}
       </strong>
     </div>
     <div class="text-end">
-      <small class="text-muted d-block">Warrant</small>
+      <small class="text-white-50 d-block">Warrant</small>
       {% if warrant_suspect %}
         <strong class="text-success">{{ warrant_suspect.name }}</strong>
       {% else %}
-        <span class="text-muted">None issued</span>
+        <span class="text-white-50">None issued</span>
       {% endif %}
     </div>
   </div>
 
   <div class="row g-4">
 
-    {# Left panel #}
-    <div class="col-md-7">
+    {# ── Left panel ── #}
+    <div class="col-lg-7">
 
       {% if game.last_witness_result %}
         {% if game.last_witness_result.clue %}
-          <div class="alert alert-success">
-            <strong>{{ game.last_witness_result.witness }}</strong> told you: "{{ game.last_witness_result.clue }}"
+          <div class="alert alert-success alert-dismissible fade show py-2">
+            <strong>{{ game.last_witness_result.witness }}</strong>: "{{ game.last_witness_result.clue }}"
           </div>
         {% else %}
-          <div class="alert alert-secondary">
+          <div class="alert alert-secondary alert-dismissible fade show py-2">
             <strong>{{ game.last_witness_result.witness }}</strong> didn't know anything useful.
           </div>
         {% endif %}
       {% endif %}
 
       {% if active_location %}
-        {# Witness selection mode #}
+        {# ── Witness selection ── #}
         {% for loc in locations %}{% if loc.key == active_location %}
-          <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">
-            {{ loc.icon }} {{ loc.name }} — Choose someone to speak to
-          </h5>
+          <p class="text-muted small text-uppercase mb-2" style="letter-spacing:.05em">
+            {{ loc.icon }} {{ loc.name }} — who do you want to speak to?
+          </p>
         {% endif %}{% endfor %}
 
-        <div class="row g-2 mb-4">
+        <div class="row g-2 mb-3">
           {% for witness in witnesses %}
             <div class="col-4">
               <form method="post" action="{% url 'game:speak' %}">
                 {% csrf_token %}
                 <input type="hidden" name="witness_name" value="{{ witness }}">
-                <button type="submit" class="btn btn-outline-warning w-100 py-3">
-                  👤 {{ witness }}
+                <button type="submit" class="btn btn-outline-warning w-100 witness-btn">
+                  👤<br><span class="fw-semibold">{{ witness }}</span>
                 </button>
               </form>
             </div>
           {% endfor %}
         </div>
-
-        <a href="{% url 'game:case' %}" class="btn btn-sm btn-link text-muted">← Back to locations</a>
+        <a href="{% url 'game:case' %}" class="text-muted small">← Back to locations</a>
 
       {% else %}
-        {# Normal mode: location buttons #}
-        <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">Investigate a Location</h5>
+        {# ── Location buttons ── #}
+        <p class="text-muted small text-uppercase mb-2" style="letter-spacing:.05em">Investigate a location</p>
         <div class="row g-2 mb-4">
           {% for loc in locations %}
             <div class="col-6">
               <form method="post" action="{% url 'game:investigate' %}">
                 {% csrf_token %}
                 <input type="hidden" name="location" value="{{ loc.key }}">
-                <button type="submit" class="btn btn-outline-secondary w-100 text-start {% if not loc.available %}disabled{% endif %}" {% if not loc.available %}disabled{% endif %}>
+                <button type="submit"
+                  class="btn btn-outline-secondary w-100 text-start location-btn {% if not loc.available %}disabled{% endif %}"
+                  {% if not loc.available %}disabled{% endif %}>
                   <span class="fs-5">{{ loc.icon }}</span>
-                  <span class="ms-2 fw-semibold">{{ loc.name }}</span>
-                  <br>
-                  <small class="text-muted ms-2">
-                    {% if loc.available %}
-                      {{ loc.cost }}h per conversation
-                    {% else %}
-                      No leads here
-                    {% endif %}
+                  <span class="ms-1 fw-semibold">{{ loc.name }}</span><br>
+                  <small class="text-muted">
+                    {% if loc.available %}{{ loc.cost }}h per conversation{% else %}No leads here{% endif %}
                   </small>
                 </button>
               </form>
@@ -93,16 +104,17 @@
           {% endfor %}
         </div>
 
+        {# ── Travel ── #}
         {% if travel_options %}
-          <h5 class="text-uppercase text-muted mb-2" style="font-size:0.8rem;letter-spacing:0.05em">Fly to Next Destination</h5>
-          <p class="text-muted small mb-3">Use your travel clues to pick the right country. Wrong choice costs 4 hours.</p>
+          <p class="text-muted small text-uppercase mb-1" style="letter-spacing:.05em">Fly to next destination</p>
+          <p class="text-muted small mb-3">Wrong choice costs 4 hours. Use your clues and the <strong>Factbook</strong> tab to narrow it down.</p>
           <div class="row g-2">
             {% for country in travel_options %}
               <div class="col-4">
                 <form method="post" action="{% url 'game:travel' %}">
                   {% csrf_token %}
                   <input type="hidden" name="country_id" value="{{ country.pk }}">
-                  <button type="submit" class="btn btn-outline-primary w-100">
+                  <button type="submit" class="btn btn-outline-primary w-100 py-3">
                     <div class="fw-semibold">{{ country.common_name }}</div>
                     <small class="text-muted">6h flight</small>
                   </button>
@@ -112,39 +124,46 @@
           </div>
         {% else %}
           <div class="alert alert-info">
-            You are at the <strong>final location</strong>. Issue a warrant and make the arrest.
+            You are at the <strong>final location</strong>. Identify the suspect and make the arrest.
           </div>
         {% endif %}
 
       {% endif %}
-
     </div>
 
-    {# Right panel: notepad + warrant + arrest #}
-    <div class="col-md-5">
+    {# ── Right panel (tabbed) ── #}
+    <div class="col-lg-5" id="right-panel">
+      <ul class="nav nav-tabs mb-0" role="tablist">
+        <li class="nav-item">
+          <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-notes" type="button">📓 Notes</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-suspects" type="button">👥 Suspects</button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-factbook" type="button">🌍 Factbook</button>
+        </li>
+      </ul>
 
-      <div class="card border-warning mb-3">
-        <div class="card-header bg-warning bg-opacity-25">
-          <strong>📓 Notepad</strong>
-        </div>
-        <div class="card-body" style="max-height:300px;overflow-y:auto">
+      <div class="tab-content border border-top-0 rounded-bottom p-3">
+
+        {# ── Notes tab ── #}
+        <div class="tab-pane fade show active" id="tab-notes">
           {% if game.clues_seen %}
-            <ul class="list-unstyled mb-0">
+            <div class="mb-3">
               {% for clue in game.clues_seen %}
-                <li class="border-bottom py-2 small">{{ clue }}</li>
+                <div class="clue-item">{{ clue }}</div>
               {% endfor %}
-            </ul>
+            </div>
           {% else %}
-            <p class="text-muted small mb-0">No clues yet. Visit a location and speak to witnesses.</p>
+            <p class="text-muted small mb-3">No clues yet — visit a location and speak to witnesses.</p>
           {% endif %}
-        </div>
-      </div>
 
-      <div class="card mb-3">
-        <div class="card-header"><strong>Issue Warrant</strong></div>
-        <div class="card-body">
-          <form method="post" action="{% url 'game:warrant' %}">
+          <hr class="my-2">
+
+          <form method="post" action="{% url 'game:warrant' %}" class="mb-2">
             {% csrf_token %}
+            <label class="form-label small fw-semibold">Issue Warrant</label>
             <select name="suspect_id" class="form-select form-select-sm mb-2">
               <option value="">— Select a suspect —</option>
               {% for s in suspects %}
@@ -155,19 +174,68 @@
             </select>
             <button type="submit" class="btn btn-warning btn-sm w-100">Issue Warrant</button>
           </form>
+
+          {% if warrant_suspect %}
+            <form method="post" action="{% url 'game:arrest' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger w-100 mt-1">
+                🚨 Arrest {{ warrant_suspect.name }}
+              </button>
+            </form>
+          {% endif %}
         </div>
+
+        {# ── Suspects tab ── #}
+        <div class="tab-pane fade" id="tab-suspects">
+          <p class="text-muted small mb-2">Cross-reference your clues to identify the culprit.</p>
+          {% load static %}
+          {% for s in suspects %}
+            <div class="suspect-row d-flex align-items-start gap-2">
+              {% if s.has_picture %}
+                <img src="{% get_static_prefix %}criminals/img/{{ s.name }}.jpg"
+                     alt="{{ s.name }}" width="40" height="40"
+                     style="object-fit:cover;border-radius:4px;flex-shrink:0">
+              {% else %}
+                <div style="width:40px;height:40px;background:#dee2e6;border-radius:4px;flex-shrink:0"></div>
+              {% endif %}
+              <div>
+                <div class="fw-semibold" style="font-size:.85rem">{{ s.name }}</div>
+                <div class="mt-1">
+                  <span class="badge bg-secondary trait-badge">{{ s.get_sex_display }}</span>
+                  {% if s.hair %}<span class="badge bg-secondary trait-badge">{{ s.get_hair_display }} hair</span>{% endif %}
+                  {% if s.hobby %}<span class="badge bg-secondary trait-badge">{{ s.get_hobby_display }}</span>{% endif %}
+                  {% if s.feature %}<span class="badge bg-secondary trait-badge">{{ s.get_feature_display }}</span>{% endif %}
+                  {% if s.auto %}<span class="badge bg-secondary trait-badge">{{ s.get_auto_display }}</span>{% endif %}
+                  {% if s.food %}<span class="badge bg-secondary trait-badge">{{ s.get_food_display }}</span>{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {# ── Factbook tab ── #}
+        <div class="tab-pane fade" id="tab-factbook">
+          <p class="text-muted small mb-2">Look up countries to match your travel clues.</p>
+          {% for country in all_countries %}
+            <div class="country-row">
+              <div class="fw-semibold">{{ country.common_name }}</div>
+              <div class="text-muted" style="font-size:.75rem;line-height:1.5">
+                {% if country.currency %}<span>💰 {{ country.currency }}</span> · {% endif %}
+                {% if country.exports %}<span>📦 {{ country.exports }}</span>{% endif %}
+                {% if country.geography %}<br><span>🗺 {{ country.geography }}</span>{% endif %}
+                {% if country.fauna %}<br><span>🐾 {{ country.fauna }}</span>{% endif %}
+                {% if country.flora %}<br><span>🌿 {{ country.flora }}</span>{% endif %}
+                {% with colours=country.flag_colours.all %}
+                  {% if colours %}<br><span>🚩 {% for c in colours %}{{ c }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+                {% endwith %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
       </div>
-
-      {% if warrant_suspect %}
-        <form method="post" action="{% url 'game:arrest' %}">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger w-100">
-            🚨 Make Arrest — {{ warrant_suspect.name }}
-          </button>
-        </form>
-      {% endif %}
-
     </div>
+
   </div>
 
 {% endblock %}

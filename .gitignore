@@ -1,4 +1,3 @@
-*.json
 *.pyc
 *.sqlite3
 /.env
@@ -6,3 +5,9 @@
 /.venv
 /.superpowers/
 /.playwright-mcp/
+*.png
+*.jpg
+# ignore root-level JSON but not fixtures
+/*.json
+/package*.json
+!*/fixtures/*.json

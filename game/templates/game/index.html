@@ -1,17 +1,47 @@
 {% extends 'base.html' %}
 
-{% block title %}New Case — Global Detective{% endblock %}
+{% block title %}Global Detective Quest{% endblock %}
 
 {% block content %}
-  <h1 class="mb-3">Global Detective Quest</h1>
-  <p class="lead">A criminal has struck somewhere in the world. You have one week to track them down.</p>
-  <ul class="mb-4">
-    <li>Visit locations and speak to witnesses — some know something, some don't</li>
-    <li>Use the World Factbook to identify your next destination</li>
-    <li>Issue a warrant once you know the culprit, then make the arrest</li>
-  </ul>
-  <form method="post" action="{% url 'game:new' %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-primary btn-lg">Start New Case</button>
-  </form>
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+      <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold">Global Detective Quest</h1>
+        <p class="lead text-muted">A master criminal is on the run. Track them down before time runs out.</p>
+      </div>
+
+      {% if has_active_game %}
+        <div class="card border-warning mb-4">
+          <div class="card-body text-center">
+            <h5 class="card-title">Case In Progress</h5>
+            <p class="card-text text-muted">You have an active case. Resume the investigation or abandon it for a new one.</p>
+            <a href="{% url 'game:case' %}" class="btn btn-warning btn-lg me-2">Resume Case</a>
+            <form method="post" action="{% url 'game:new' %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-secondary btn-lg">Abandon &amp; Start New</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title">How to Play</h5>
+            <ul class="mb-3">
+              <li>Visit locations and speak to witnesses — some know something, some don't</li>
+              <li>Use the <strong>Factbook</strong> tab to identify your next destination from travel clues</li>
+              <li>Check the <strong>Suspects</strong> tab to cross-reference traits with your clues</li>
+              <li>Issue a warrant once you've identified the culprit, then make the arrest</li>
+              <li>You have <strong>7 days</strong> — every action costs time</li>
+            </ul>
+            <form method="post" action="{% url 'game:new' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary btn-lg w-100">Start New Case</button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
 {% endblock %}
