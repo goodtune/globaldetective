@@ -15,8 +15,8 @@ A Carmen Sandiego-style deduction game built as a new `game` Django app. The pla
 
 1. Player starts a new case from the home page.
 2. A case is generated server-side: a random suspect and a trail of 3–5 countries are chosen.
-3. Player is placed at the first country (the crime scene) with a time budget of **24 hours**.
-4. Player investigates locations in the current country — each visit costs time and reveals one clue.
+3. Player is placed at the first country (the crime scene) with a time budget of **7 days (168 hours)**, displayed as "X days, Y hours".
+4. Player investigates locations in the current country. Clicking a location shows 3 witnesses to speak to. Choosing one costs time; the witness either reveals a clue or knows nothing (random).
 5. Clues are either **suspect trait clues** (narrowing down the culprit) or **travel clues** (hinting at the next country in the trail via factbook data).
 6. Player uses travel clues to identify the next country and flies there (costs time; wrong choice costs a penalty).
 7. Repeat until the player has enough suspect clues to identify the culprit.
@@ -46,7 +46,9 @@ No new database models. All game state lives in `request.session`. Existing `Sus
         "1": [...],
         ...
     },
-    "time_remaining": int,          # hours remaining
+    "active_location": str|None,     # location key if witness selection is active, else None
+    "last_witness_result": dict|None,  # {"witness": str, "clue": str|None} after speaking
+    "time_remaining": int,          # hours remaining (starts at 168)
     "warrant_suspect_id": int|None, # PK of warranted suspect, or None
     "status": str,                  # "active" | "won" | "lost"
 }
@@ -57,8 +59,9 @@ No new database models. All game state lives in `request.session`. Existing `Sus
 ```
 GET  /game/               → start screen (new case button)
 POST /game/new/           → generate case, store in session, redirect to /game/case/
-GET  /game/case/          → main game screen
-POST /game/investigate/   → investigate a location (deduct time, reveal clue)
+GET  /game/case/          → main game screen (shows witnesses if active_location is set)
+POST /game/investigate/   → activate a location (set active_location, no time cost)
+POST /game/speak/         → speak to a witness (deduct time, 50% clue if pool not empty)
 POST /game/travel/        → fly to a chosen country (deduct time, penalty if wrong)
 POST /game/warrant/       → issue or change warrant (select suspect from dossier)
 POST /game/arrest/        → attempt arrest (win/lose resolution)
@@ -84,19 +87,23 @@ On `POST /game/new/`:
 
 ## Investigation Locations
 
-Four fixed location types appear at every country. Each visit reveals the next clue from that stop's pool and deducts time.
+Four fixed location types appear at every country. The player clicks a location to enter it (free), then chooses one of three witnesses to speak to (costs time). The **clue type is never shown** on the location button — the player must discover what each location tends to reveal.
 
-| Location | Time Cost | Clue Type |
-|---|---|---|
-| 📚 Library | 2 hours | Travel clue (next country) |
-| 🚔 Police Station | 3 hours | Suspect trait clue |
-| ✈️ Airport | 1 hour | Travel clue (next country) |
-| 🛒 Market | 2 hours | Suspect trait clue |
+| Location | Time Cost per Conversation | Witness Pool | Clue Type |
+|---|---|---|---|
+| 📚 Library | 2 hours | Librarian, Student, Professor | Travel clue |
+| 🚔 Police Station | 3 hours | Detective, Officer, Duty Sergeant | Suspect trait |
+| ✈️ Airport | 1 hour | Customs Agent, Flight Attendant, Pilot | Travel clue |
+| 🛒 Market | 2 hours | Merchant, Customer, Market Inspector | Suspect trait |
 
-- Locations that surface **travel clues** (Library, Airport) draw from the `travel` type pool for that stop.
-- Locations that surface **suspect clues** (Police Station, Market) draw from the `suspect` type pool.
-- Once a stop's pool for a given type is exhausted, that location type is disabled.
-- The player is never forced to exhaust clues before travelling.
+### Witness mechanic
+
+1. Player clicks a location button → `active_location` is set in session, page reloads showing 3 witness buttons. No time cost.
+2. Player clicks a witness → time is deducted. If the clue pool for this location type is non-empty, there is a **50% chance** the witness reveals the next clue. Otherwise "nothing useful".
+3. The clue (or "nothing") is shown as `last_witness_result` on the case page.
+4. Player returns to the normal case view and can speak to another witness or go elsewhere.
+5. A location button is disabled only when its clue pool is **empty**.
+6. Clues are only consumed from the pool when a witness actually reveals one (duds don't drain the pool).
 
 ---
 
@@ -172,9 +179,11 @@ When the player is ready to fly:
 
 ### Main game screen (`/game/case/`)
 
-- **Top bar**: current country, time remaining (prominent), warrant status.
-- **Left panel**: investigation location buttons (disabled if no clues remain), followed by travel destination grid.
-- **Right panel (notepad)**: all clues collected so far, colour-coded (🔵 suspect, 🟡 travel).
+- **Top bar**: current country, time remaining as "X days, Y hours" (prominent, turns red below 12h), warrant status.
+- **Left panel (normal mode)**: four location buttons (no clue type label shown), followed by travel destination grid.
+- **Left panel (witness mode)**: when `active_location` is set, shows 3 witness buttons for that location instead. Location buttons hidden.
+- **Last witness result**: shown below the witness buttons (or location buttons after returning) — either the clue text or "Nothing useful from [witness name]."
+- **Right panel (notepad)**: all clues collected so far.
 - **Bottom of right panel**: Issue Warrant form + Make Arrest button.
 
 ### Other screens

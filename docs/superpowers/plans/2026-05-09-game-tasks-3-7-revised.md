@@ -1,370 +1,19 @@
-# Game Implementation Plan
+# Game Implementation — Revised Tasks 3–7
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> These tasks supersede the Task 3–7 sections in `2026-05-09-game-implementation.md`.
+> Tasks 1 (scaffold) and 2 (clues.py) are already complete.
 
-**Goal:** Build a Carmen Sandiego-style detective game as a new `game` Django app using sessions for state and standard Django POST→redirect→GET for all actions.
-
-**Architecture:** Game state lives entirely in `request.session["game"]` as a JSON-serializable dict. Pure functions in `logic.py` compute new state from old state + action, making them trivially testable. Views handle HTTP, call logic functions, write back to session, and redirect.
-
-**Tech Stack:** Django 5.1 sessions, Bootstrap 5.3, `.venv/bin/python manage.py test`
-
----
-
-## File Map
-
-| File | Action | Responsibility |
-|---|---|---|
-| `game/__init__.py` | Create | Empty |
-| `game/apps.py` | Create | App config |
-| `game/urls.py` | Create | URL patterns (app_name="game") |
-| `game/clues.py` | Create | Clue templates + generation from suspect/country |
-| `game/logic.py` | Create | Case generation + pure action functions |
-| `game/views.py` | Create | HTTP views (read session → call logic → write session → redirect) |
-| `game/tests.py` | Create | All tests |
-| `game/templates/game/index.html` | Create | Start screen |
-| `game/templates/game/case.html` | Create | Main game screen |
-| `game/templates/game/result.html` | Create | Win/lose outcome screen |
-| `project/settings.py` | Modify | Add `"game"` to INSTALLED_APPS |
-| `project/urls.py` | Modify | Add `path("game/", include("game.urls"))` |
-| `templates/base.html` | Modify | Add Game link to navbar |
+**Design changes from original plan:**
+1. Time budget is **168 hours (7 days)**, displayed as "X days, Y hours"
+2. Visiting a location shows **3 witnesses**; speaking to one costs time and has a **50% chance** of revealing a clue (if the pool is non-empty). Duds don't drain the pool.
+3. Location buttons show **no clue type label** — the player must discover what each location reveals.
+4. New session fields: `active_location` (str|None), `last_witness_result` (dict|None)
+5. New action: `do_investigate` just sets `active_location` (free). `do_speak` deducts time and draws the clue.
+6. New URL: `POST /game/speak/`
 
 ---
 
-## Task 1: Scaffold the game app
-
-**Files:**
-- Create: `game/__init__.py`
-- Create: `game/apps.py`
-- Create: `game/urls.py`
-- Create: `game/clues.py`
-- Create: `game/logic.py`
-- Create: `game/views.py`
-- Create: `game/tests.py`
-- Modify: `project/settings.py`
-- Modify: `project/urls.py`
-
-- [ ] **Step 1: Create `game/__init__.py`** (empty file)
-
-```python
-```
-
-- [ ] **Step 2: Create `game/apps.py`**
-
-```python
-from django.apps import AppConfig
-
-
-class GameConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
-    name = "game"
-```
-
-- [ ] **Step 3: Create `game/urls.py`** (stub — views not written yet)
-
-```python
-from django.urls import path
-
-app_name = "game"
-
-urlpatterns = []
-```
-
-- [ ] **Step 4: Create stub files**
-
-`game/clues.py`:
-```python
-```
-
-`game/logic.py`:
-```python
-```
-
-`game/views.py`:
-```python
-```
-
-`game/tests.py`:
-```python
-from django.test import TestCase
-```
-
-- [ ] **Step 5: Add `"game"` to INSTALLED_APPS in `project/settings.py`**
-
-Find the line `"factbook",` and add after it:
-```python
-    "game",
-```
-
-- [ ] **Step 6: Add game URL include to `project/urls.py`**
-
-Find `path("dossiers/", include("dossiers.urls")),` and add after it:
-```python
-    path("game/", include("game.urls")),
-```
-
-- [ ] **Step 7: Verify the app loads**
-
-```bash
-.venv/bin/python manage.py check
-```
-Expected: `System check identified no issues (0 silenced).`
-
-- [ ] **Step 8: Commit**
-
-```bash
-git add game/ project/settings.py project/urls.py
-git commit -m "feat: scaffold game app"
-```
-
----
-
-## Task 2: Clue generation (`game/clues.py`)
-
-**Files:**
-- Write: `game/clues.py`
-- Write: `game/tests.py`
-
-- [ ] **Step 1: Write failing tests for clue generation**
-
-Replace the contents of `game/tests.py`:
-
-```python
-from django.test import TestCase
-
-from criminals.models import Suspect
-from places.models import Country, FlagColour
-from game.clues import clues_for_stop, suspect_clues, travel_clues
-
-
-def make_suspect(**kwargs):
-    defaults = {
-        "name": "Test Criminal",
-        "sex": "FEMALE",
-        "hair": "RED",
-        "hobby": "TENNIS",
-        "feature": "TATTOO",
-        "auto": "CONVERTIBLE",
-        "food": "SEAFOOD",
-    }
-    defaults.update(kwargs)
-    return Suspect.objects.create(**defaults)
-
-
-def make_country(code, **kwargs):
-    defaults = {
-        "name": f"Country {code}",
-        "common_name": f"Country {code}",
-        "currency": "Dollars",
-        "exports": "coffee",
-        "geography": "mountains",
-        "fauna": "lions",
-        "flora": "roses",
-    }
-    defaults.update(kwargs)
-    c = Country.objects.create(code=code, **defaults)
-    colour = FlagColour.objects.get_or_create(colour="red")[0]
-    c.flag_colours.add(colour)
-    return c
-
-
-class SuspectCluesTest(TestCase):
-    def test_returns_list_of_dicts(self):
-        s = make_suspect()
-        result = suspect_clues(s)
-        self.assertIsInstance(result, list)
-        for clue in result:
-            self.assertIn("text", clue)
-            self.assertEqual(clue["type"], "suspect")
-
-    def test_covers_all_set_traits(self):
-        s = make_suspect()
-        result = suspect_clues(s)
-        # suspect has sex, hair, hobby, feature, auto, food — all 6 traits
-        self.assertEqual(len(result), 6)
-
-    def test_skips_null_traits(self):
-        s = make_suspect(hobby=None, auto=None)
-        result = suspect_clues(s)
-        self.assertEqual(len(result), 4)  # sex, hair, feature, food
-
-
-class TravelCluesTest(TestCase):
-    def test_returns_empty_for_none(self):
-        self.assertEqual(travel_clues(None), [])
-
-    def test_returns_list_of_travel_dicts(self):
-        c = make_country("TX")
-        result = travel_clues(c)
-        self.assertIsInstance(result, list)
-        for clue in result:
-            self.assertIn("text", clue)
-            self.assertEqual(clue["type"], "travel")
-
-    def test_includes_currency_clue(self):
-        c = make_country("TC")
-        texts = [cl["text"] for cl in travel_clues(c)]
-        self.assertTrue(any("Dollars" in t for t in texts))
-
-    def test_includes_flag_colour_clue(self):
-        c = make_country("FC")
-        texts = [cl["text"] for cl in travel_clues(c)]
-        self.assertTrue(any("red" in t for t in texts))
-
-    def test_skips_blank_fields(self):
-        c = make_country("BK", currency="", exports="", geography="", fauna="", flora="")
-        # flag colour still present
-        result = travel_clues(c)
-        self.assertEqual(len(result), 1)
-
-
-class CluesForStopTest(TestCase):
-    def test_returns_suspect_and_travel_keys(self):
-        s = make_suspect()
-        c = make_country("CS")
-        result = clues_for_stop(s, c)
-        self.assertIn("suspect", result)
-        self.assertIn("travel", result)
-        self.assertTrue(len(result["suspect"]) > 0)
-        self.assertTrue(len(result["travel"]) > 0)
-
-    def test_final_stop_has_no_travel_clues(self):
-        s = make_suspect()
-        result = clues_for_stop(s, None)
-        self.assertEqual(result["travel"], [])
-```
-
-- [ ] **Step 2: Run tests to verify they fail**
-
-```bash
-.venv/bin/python manage.py test game.tests.SuspectCluesTest game.tests.TravelCluesTest game.tests.CluesForStopTest -v 2
-```
-Expected: `ImportError` or `AttributeError` — functions don't exist yet.
-
-- [ ] **Step 3: Write `game/clues.py`**
-
-```python
-import random
-
-SUSPECT_TEMPLATES = {
-    "sex": {
-        "FEMALE": "A hotel clerk said the suspect was a woman.",
-        "MALE": "A witness described the suspect as a man.",
-    },
-    "hair": {
-        "RED": "The suspect had red hair, according to a witness.",
-        "BLONDE": "A bartender mentioned the suspect was blonde.",
-        "BROWN": "The suspect had brown hair.",
-        "BLACK": "Several witnesses noted the suspect had black hair.",
-        "GREY": "A witness said the suspect had grey hair.",
-    },
-    "hobby": {
-        "TENNIS": "Someone saw the suspect carrying a tennis racket.",
-        "MUSIC": "The suspect was heard humming and carrying sheet music.",
-        "CLIMBING": "A shop owner sold the suspect mountain climbing gear.",
-        "SKYDIVE": "The suspect asked about local skydiving operators.",
-        "SWIMMING": "A witness saw the suspect heading to the pool with goggles.",
-        "CROQUET": "The suspect was spotted reading a book about croquet.",
-    },
-    "feature": {
-        "LIMP": "Several witnesses noted the suspect walked with a limp.",
-        "RING": "The suspect was wearing a distinctive ring.",
-        "TATTOO": "A bartender noticed the suspect had a tattoo.",
-        "SCAR": "A witness described a scar on the suspect's face.",
-        "JEWELERY": "The suspect was wearing a lot of jewellery.",
-    },
-    "auto": {
-        "CONVERTIBLE": "The suspect was spotted driving a convertible.",
-        "LIMO": "Someone saw the suspect leave in a limousine.",
-        "RACECAR": "The suspect was seen near a racecar.",
-        "MOTORBIKE": "A witness saw the suspect riding a motorcycle.",
-    },
-    "food": {
-        "SEAFOOD": "The suspect was seen dining on seafood at the harbour.",
-        "MEXICAN": "The hotel chef said the suspect requested Mexican food.",
-    },
-}
-
-
-def suspect_clues(suspect):
-    """Return a shuffled list of {text, type} dicts from the suspect's traits."""
-    clues = []
-    for field, templates in SUSPECT_TEMPLATES.items():
-        value = getattr(suspect, field, None)
-        if value and value in templates:
-            clues.append({"text": templates[value], "type": "suspect"})
-    random.shuffle(clues)
-    return clues
-
-
-def travel_clues(country):
-    """Return a shuffled list of {text, type} dicts hinting at the given country."""
-    if country is None:
-        return []
-    clues = []
-    if country.currency:
-        clues.append({
-            "text": f"They were overheard asking about exchanging money for {country.currency}.",
-            "type": "travel",
-        })
-    if country.exports:
-        clues.append({
-            "text": f"A customs officer saw the suspect studying brochures about {country.exports}.",
-            "type": "travel",
-        })
-    colours = list(country.flag_colours.values_list("colour", flat=True))
-    if colours:
-        if len(colours) == 1:
-            colour_str = colours[0]
-        else:
-            colour_str = ", ".join(colours[:-1]) + f" and {colours[-1]}"
-        clues.append({
-            "text": f"The suspect wore a pin with {colour_str} — like a national flag.",
-            "type": "travel",
-        })
-    if country.geography:
-        clues.append({
-            "text": f"Someone heard the suspect mention {country.geography}.",
-            "type": "travel",
-        })
-    if country.fauna:
-        clues.append({
-            "text": f"The suspect had a wildlife guide open to a page about {country.fauna}.",
-            "type": "travel",
-        })
-    if country.flora:
-        clues.append({
-            "text": f"A florist said the suspect asked about {country.flora}.",
-            "type": "travel",
-        })
-    random.shuffle(clues)
-    return clues
-
-
-def clues_for_stop(suspect, next_country):
-    """Return {"suspect": [...], "travel": [...]} clue pools for one trail stop."""
-    return {
-        "suspect": suspect_clues(suspect),
-        "travel": travel_clues(next_country),
-    }
-```
-
-- [ ] **Step 4: Run tests to verify they pass**
-
-```bash
-.venv/bin/python manage.py test game.tests.SuspectCluesTest game.tests.TravelCluesTest game.tests.CluesForStopTest -v 2
-```
-Expected: `OK` with 8 tests passing.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add game/clues.py game/tests.py
-git commit -m "feat: add clue generation"
-```
-
----
-
-## Task 3: Case generation and action functions (`game/logic.py`) [REVISED]
+## Task 3: Case generation and action functions (`game/logic.py`)
 
 **Files:**
 - Write: `game/logic.py`
@@ -375,13 +24,18 @@ git commit -m "feat: add clue generation"
 Add at the end of `game/tests.py`:
 
 ```python
+from unittest.mock import patch
+
 from game.logic import (
     FLIGHT_COST,
+    LOCATION_WITNESSES,
     WRONG_FLIGHT_PENALTY,
     do_arrest,
     do_investigate,
+    do_speak,
     do_travel,
     do_warrant,
+    format_time,
     generate_case,
 )
 
@@ -399,10 +53,29 @@ def make_game(suspect, trail):
         "current_stop": 0,
         "clues_seen": [],
         "clues_available": clues_available,
-        "time_remaining": 24,
+        "active_location": None,
+        "last_witness_result": None,
+        "time_remaining": 168,
         "warrant_suspect_id": None,
         "status": "active",
     }
+
+
+class FormatTimeTest(TestCase):
+    def test_days_and_hours(self):
+        self.assertEqual(format_time(53), "2 days, 5h")
+
+    def test_exact_days(self):
+        self.assertEqual(format_time(48), "2 days")
+
+    def test_hours_only(self):
+        self.assertEqual(format_time(5), "5h")
+
+    def test_one_day(self):
+        self.assertEqual(format_time(24), "1 day")
+
+    def test_one_day_and_hours(self):
+        self.assertEqual(format_time(25), "1 day, 1h")
 
 
 class GenerateCaseTest(TestCase):
@@ -415,8 +88,11 @@ class GenerateCaseTest(TestCase):
         self.assertIn("suspect_id", game)
         self.assertIn("trail", game)
         self.assertIn("clues_available", game)
+        self.assertIn("active_location", game)
+        self.assertIn("last_witness_result", game)
         self.assertEqual(game["status"], "active")
-        self.assertEqual(game["time_remaining"], 24)
+        self.assertEqual(game["time_remaining"], 168)
+        self.assertIsNone(game["active_location"])
 
     def test_trail_length_between_3_and_5(self):
         for _ in range(10):
@@ -443,40 +119,89 @@ class DoInvestigateTest(TestCase):
         self.suspect = make_suspect()
         self.countries = [make_country(str(i)) for i in range(3)]
 
-    def test_deducts_time(self):
+    def test_sets_active_location(self):
         game = make_game(self.suspect, self.countries)
         result = do_investigate(game, "library")
-        self.assertLess(result["time_remaining"], 24)
+        self.assertEqual(result["active_location"], "library")
 
-    def test_adds_clue_to_seen(self):
+    def test_no_time_deducted(self):
         game = make_game(self.suspect, self.countries)
-        result = do_investigate(game, "police")
+        result = do_investigate(game, "library")
+        self.assertEqual(result["time_remaining"], 168)
+
+    def test_clears_last_witness_result(self):
+        game = make_game(self.suspect, self.countries)
+        game["last_witness_result"] = {"witness": "Someone", "clue": "clue"}
+        result = do_investigate(game, "library")
+        self.assertIsNone(result["last_witness_result"])
+
+    def test_does_not_mutate_original(self):
+        game = make_game(self.suspect, self.countries)
+        do_investigate(game, "police")
+        self.assertIsNone(game["active_location"])
+
+
+class DoSpeakTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def test_deducts_time_for_police(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "police", "Officer")
+        self.assertEqual(result["time_remaining"], 168 - 3)
+
+    def test_deducts_time_for_library(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "library", "Librarian")
+        self.assertEqual(result["time_remaining"], 168 - 2)
+
+    def test_sets_last_witness_result(self):
+        game = make_game(self.suspect, self.countries)
+        result = do_speak(game, "police", "Officer")
+        self.assertIsNotNone(result["last_witness_result"])
+        self.assertEqual(result["last_witness_result"]["witness"], "Officer")
+
+    def test_clue_revealed_when_lucky(self):
+        game = make_game(self.suspect, self.countries)
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.1
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNotNone(result["last_witness_result"]["clue"])
         self.assertEqual(len(result["clues_seen"]), 1)
 
-    def test_removes_clue_from_pool(self):
+    def test_no_clue_when_unlucky(self):
         game = make_game(self.suspect, self.countries)
-        before = len(game["clues_available"]["0"]["suspect"])
-        result = do_investigate(game, "police")
-        after = len(result["clues_available"]["0"]["suspect"])
-        self.assertEqual(after, before - 1)
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.9
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["last_witness_result"]["clue"])
+        self.assertEqual(len(result["clues_seen"]), 0)
 
-    def test_exhausted_pool_does_nothing(self):
+    def test_no_clue_when_pool_empty(self):
         game = make_game(self.suspect, self.countries)
-        game["clues_available"]["0"]["travel"] = []
-        result = do_investigate(game, "library")
-        self.assertEqual(result["time_remaining"], 24)
-        self.assertEqual(result["clues_seen"], [])
+        game["clues_available"]["0"]["suspect"] = []
+        with patch("game.logic.random") as mock_random:
+            mock_random.random.return_value = 0.1
+            result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["last_witness_result"]["clue"])
+
+    def test_clears_active_location(self):
+        game = make_game(self.suspect, self.countries)
+        game["active_location"] = "police"
+        result = do_speak(game, "police", "Officer")
+        self.assertIsNone(result["active_location"])
 
     def test_time_zero_sets_lost(self):
         game = make_game(self.suspect, self.countries)
         game["time_remaining"] = 1
-        result = do_investigate(game, "police")
+        result = do_speak(game, "police", "Officer")
         self.assertEqual(result["status"], "lost")
 
     def test_does_not_mutate_original(self):
         game = make_game(self.suspect, self.countries)
         original_time = game["time_remaining"]
-        do_investigate(game, "police")
+        do_speak(game, "police", "Officer")
         self.assertEqual(game["time_remaining"], original_time)
 
 
@@ -495,12 +220,12 @@ class DoTravelTest(TestCase):
         game = make_game(self.suspect, self.countries)
         correct_pk = self.countries[1].pk
         result = do_travel(game, correct_pk)
-        self.assertEqual(result["time_remaining"], 24 - FLIGHT_COST)
+        self.assertEqual(result["time_remaining"], 168 - FLIGHT_COST)
 
     def test_wrong_country_deducts_penalty(self):
         game = make_game(self.suspect, self.countries)
         result = do_travel(game, 99999)
-        self.assertEqual(result["time_remaining"], 24 - WRONG_FLIGHT_PENALTY)
+        self.assertEqual(result["time_remaining"], 168 - WRONG_FLIGHT_PENALTY)
 
     def test_wrong_country_does_not_advance_stop(self):
         game = make_game(self.suspect, self.countries)
@@ -509,10 +234,10 @@ class DoTravelTest(TestCase):
 
     def test_at_final_stop_does_nothing(self):
         game = make_game(self.suspect, self.countries)
-        game["current_stop"] = 2  # final stop for 3-country trail
+        game["current_stop"] = 2
         result = do_travel(game, self.countries[0].pk)
         self.assertEqual(result["current_stop"], 2)
-        self.assertEqual(result["time_remaining"], 24)
+        self.assertEqual(result["time_remaining"], 168)
 
     def test_time_zero_sets_lost(self):
         game = make_game(self.suspect, self.countries)
@@ -555,12 +280,18 @@ class DoArrestTest(TestCase):
         game["warrant_suspect_id"] = 99999
         result = do_arrest(game)
         self.assertEqual(result["status"], "lost")
+
+
+class LocationWitnessesTest(TestCase):
+    def test_all_locations_have_three_witnesses(self):
+        for location in ("library", "police", "airport", "market"):
+            self.assertEqual(len(LOCATION_WITNESSES[location]), 3)
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-.venv/bin/python manage.py test game.tests.GenerateCaseTest game.tests.DoInvestigateTest game.tests.DoTravelTest game.tests.DoWarrantTest game.tests.DoArrestTest -v 2
+.venv/bin/python manage.py test game.tests.FormatTimeTest game.tests.GenerateCaseTest game.tests.DoInvestigateTest game.tests.DoSpeakTest game.tests.DoTravelTest game.tests.DoWarrantTest game.tests.DoArrestTest game.tests.LocationWitnessesTest -v 2
 ```
 Expected: `ImportError` — logic.py is empty.
 
@@ -574,7 +305,8 @@ from criminals.models import Suspect
 from places.models import Country
 from game.clues import clues_for_stop
 
-STARTING_TIME = 24
+STARTING_TIME = 168  # 7 days
+
 FLIGHT_COST = 6
 WRONG_FLIGHT_PENALTY = 4
 
@@ -590,6 +322,22 @@ LOCATION_CLUE_TYPE = {
     "airport": "travel",
     "market": "suspect",
 }
+LOCATION_WITNESSES = {
+    "library": ["Librarian", "Student", "Professor"],
+    "police": ["Detective", "Officer", "Duty Sergeant"],
+    "airport": ["Customs Agent", "Flight Attendant", "Pilot"],
+    "market": ["Merchant", "Customer", "Market Inspector"],
+}
+
+
+def format_time(hours):
+    """Return hours formatted as 'X days, Yh', '1 day', '5h', etc."""
+    days, remaining = divmod(hours, 24)
+    if days > 0 and remaining > 0:
+        return f"{days} day{'s' if days != 1 else ''}, {remaining}h"
+    if days > 0:
+        return f"{days} day{'s' if days != 1 else ''}"
+    return f"{remaining}h"
 
 
 def generate_case():
@@ -608,6 +356,8 @@ def generate_case():
         "current_stop": 0,
         "clues_seen": [],
         "clues_available": clues_available,
+        "active_location": None,
+        "last_witness_result": None,
         "time_remaining": STARTING_TIME,
         "warrant_suspect_id": None,
         "status": "active",
@@ -615,17 +365,33 @@ def generate_case():
 
 
 def do_investigate(game, location):
+    """Activate a location for witness selection. No time cost."""
+    game = copy.deepcopy(game)
+    game["active_location"] = location
+    game["last_witness_result"] = None
+    return game
+
+
+def do_speak(game, location, witness_name):
+    """Speak to a witness: deduct time, 50% clue if pool non-empty."""
     game = copy.deepcopy(game)
     stop_key = str(game["current_stop"])
     clue_type = LOCATION_CLUE_TYPE[location]
     pool = game["clues_available"][stop_key][clue_type]
 
-    if not pool:
-        return game
-
-    clue = pool.pop(0)
-    game["clues_seen"].append(clue["text"])
+    game["active_location"] = None
     game["time_remaining"] -= LOCATION_COSTS[location]
+
+    clue_text = None
+    if pool and random.random() < 0.5:
+        clue = pool.pop(0)
+        clue_text = clue["text"]
+        game["clues_seen"].append(clue_text)
+
+    game["last_witness_result"] = {
+        "witness": witness_name,
+        "clue": clue_text,
+    }
 
     if game["time_remaining"] <= 0:
         game["status"] = "lost"
@@ -645,6 +411,9 @@ def do_travel(game, country_pk):
         game["time_remaining"] -= FLIGHT_COST
     else:
         game["time_remaining"] -= WRONG_FLIGHT_PENALTY
+
+    game["active_location"] = None
+    game["last_witness_result"] = None
 
     if game["time_remaining"] <= 0:
         game["status"] = "lost"
@@ -670,9 +439,9 @@ def do_arrest(game):
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-.venv/bin/python manage.py test game.tests.GenerateCaseTest game.tests.DoInvestigateTest game.tests.DoTravelTest game.tests.DoWarrantTest game.tests.DoArrestTest -v 2
+.venv/bin/python manage.py test game.tests.FormatTimeTest game.tests.GenerateCaseTest game.tests.DoInvestigateTest game.tests.DoSpeakTest game.tests.DoTravelTest game.tests.DoWarrantTest game.tests.DoArrestTest game.tests.LocationWitnessesTest -v 2
 ```
-Expected: `OK` with 20 tests passing.
+Expected: `OK` — all tests pass.
 
 - [ ] **Step 5: Commit**
 
@@ -683,7 +452,7 @@ git commit -m "feat: add case generation and game action logic"
 
 ---
 
-## Task 4: Views
+## Task 4: Views and URL routing (`game/views.py`)
 
 **Files:**
 - Write: `game/views.py`
@@ -749,20 +518,72 @@ class InvestigateViewTest(TestCase):
         session["game"] = generate_case()
         session.save()
 
-    def test_post_valid_location_redirects_to_case(self):
+    def test_post_sets_active_location(self):
+        self._start_game()
+        self.client.post("/game/investigate/", {"location": "police"})
+        game = self.client.session["game"]
+        self.assertEqual(game["active_location"], "police")
+
+    def test_post_does_not_deduct_time(self):
+        self._start_game()
+        self.client.post("/game/investigate/", {"location": "police"})
+        game = self.client.session["game"]
+        self.assertEqual(game["time_remaining"], 168)
+
+    def test_post_redirects_to_case(self):
         self._start_game()
         response = self.client.post("/game/investigate/", {"location": "police"})
         self.assertRedirects(response, "/game/case/")
 
-    def test_post_updates_time_in_session(self):
-        self._start_game()
-        self.client.post("/game/investigate/", {"location": "police"})
-        game = self.client.session["game"]
-        self.assertLess(game["time_remaining"], 24)
-
     def test_post_invalid_location_redirects_to_case(self):
         self._start_game()
         response = self.client.post("/game/investigate/", {"location": "bar"})
+        self.assertRedirects(response, "/game/case/")
+
+
+class SpeakViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(3)]
+
+    def _start_game_at_location(self, location="police"):
+        from game.logic import generate_case
+        session = self.client.session
+        game = generate_case()
+        game["active_location"] = location
+        session["game"] = game
+        session.save()
+
+    def test_post_deducts_time(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertEqual(game["time_remaining"], 168 - 3)
+
+    def test_post_sets_last_witness_result(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertIsNotNone(game["last_witness_result"])
+        self.assertEqual(game["last_witness_result"]["witness"], "Officer")
+
+    def test_post_clears_active_location(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertIsNone(game["active_location"])
+
+    def test_post_redirects_to_case(self):
+        self._start_game_at_location("police")
+        response = self.client.post("/game/speak/", {"witness_name": "Officer"})
+        self.assertRedirects(response, "/game/case/")
+
+    def test_post_without_active_location_redirects_to_case(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+        response = self.client.post("/game/speak/", {"witness_name": "Officer"})
         self.assertRedirects(response, "/game/case/")
 
 
@@ -781,7 +602,7 @@ class TravelViewTest(TestCase):
         self._start_game()
         self.client.post("/game/travel/", {"country_id": "99999"})
         game = self.client.session["game"]
-        self.assertEqual(game["time_remaining"], 24 - 4)
+        self.assertEqual(game["time_remaining"], 168 - 4)
 
     def test_post_correct_country_advances_stop(self):
         self._start_game()
@@ -879,9 +700,9 @@ class ResultViewTest(TestCase):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-.venv/bin/python manage.py test game.tests.IndexViewTest game.tests.NewCaseViewTest game.tests.CaseViewTest game.tests.InvestigateViewTest game.tests.TravelViewTest game.tests.WarrantViewTest game.tests.ArrestViewTest game.tests.ResultViewTest -v 2
+.venv/bin/python manage.py test game.tests.IndexViewTest game.tests.NewCaseViewTest game.tests.CaseViewTest game.tests.InvestigateViewTest game.tests.SpeakViewTest game.tests.TravelViewTest game.tests.WarrantViewTest game.tests.ArrestViewTest game.tests.ResultViewTest -v 2
 ```
-Expected: errors — views and URLs don't exist yet.
+Expected: errors — views and URLs not wired up yet.
 
 - [ ] **Step 3: Write `game/views.py`**
 
@@ -893,10 +714,13 @@ from django.shortcuts import redirect, render
 from criminals.models import Suspect
 from places.models import Country
 from game.logic import (
+    LOCATION_WITNESSES,
     do_arrest,
     do_investigate,
+    do_speak,
     do_travel,
     do_warrant,
+    format_time,
     generate_case,
 )
 
@@ -949,6 +773,9 @@ def case(request):
     if game["warrant_suspect_id"]:
         warrant_suspect = Suspect.objects.get(pk=game["warrant_suspect_id"])
 
+    active_location = game.get("active_location")
+    witnesses = LOCATION_WITNESSES.get(active_location, []) if active_location else []
+
     context = {
         "game": game,
         "current_country": current_country,
@@ -956,6 +783,9 @@ def case(request):
         "travel_options": travel_options,
         "suspects": Suspect.objects.order_by("name"),
         "warrant_suspect": warrant_suspect,
+        "active_location": active_location,
+        "witnesses": witnesses,
+        "time_display": format_time(game["time_remaining"]),
     }
     return render(request, "game/case.html", context)
 
@@ -970,6 +800,21 @@ def investigate(request):
     if location not in VALID_LOCATIONS:
         return redirect("game:case")
     request.session["game"] = do_investigate(game, location)
+    request.session.modified = True
+    return redirect("game:case")
+
+
+def speak(request):
+    if request.method != "POST":
+        return redirect("game:case")
+    game = request.session.get("game")
+    if not game or game["status"] != "active":
+        return redirect("game:index")
+    location = game.get("active_location")
+    if not location or location not in VALID_LOCATIONS:
+        return redirect("game:case")
+    witness_name = request.POST.get("witness_name", "")
+    request.session["game"] = do_speak(game, location, witness_name)
     request.session.modified = True
     if request.session["game"]["status"] == "lost":
         return redirect("game:result")
@@ -1049,6 +894,7 @@ urlpatterns = [
     path("new/", views.new_case, name="new"),
     path("case/", views.case, name="case"),
     path("investigate/", views.investigate, name="investigate"),
+    path("speak/", views.speak, name="speak"),
     path("travel/", views.travel, name="travel"),
     path("warrant/", views.warrant, name="warrant"),
     path("arrest/", views.arrest, name="arrest"),
@@ -1059,9 +905,9 @@ urlpatterns = [
 - [ ] **Step 5: Run tests to verify they pass**
 
 ```bash
-.venv/bin/python manage.py test game.tests.IndexViewTest game.tests.NewCaseViewTest game.tests.CaseViewTest game.tests.InvestigateViewTest game.tests.TravelViewTest game.tests.WarrantViewTest game.tests.ArrestViewTest game.tests.ResultViewTest -v 2
+.venv/bin/python manage.py test game.tests.IndexViewTest game.tests.NewCaseViewTest game.tests.CaseViewTest game.tests.InvestigateViewTest game.tests.SpeakViewTest game.tests.TravelViewTest game.tests.WarrantViewTest game.tests.ArrestViewTest game.tests.ResultViewTest -v 2
 ```
-Expected: `TemplateDoesNotExist` errors — templates haven't been created yet. Views resolve correctly otherwise.
+Expected: `TemplateDoesNotExist` errors — views resolve correctly but templates not yet created.
 
 - [ ] **Step 6: Commit**
 
@@ -1078,7 +924,7 @@ git commit -m "feat: add game views and URL routing"
 - Create: `game/templates/game/index.html`
 - Create: `game/templates/game/result.html`
 
-- [ ] **Step 1: Create `game/templates/game/` directory**
+- [ ] **Step 1: Create directory**
 
 ```bash
 mkdir -p game/templates/game
@@ -1093,9 +939,9 @@ mkdir -p game/templates/game
 
 {% block content %}
   <h1 class="mb-3">Global Detective Quest</h1>
-  <p class="lead">A criminal has struck somewhere in the world. Track them across the globe, collect clues, and make the arrest before time runs out.</p>
+  <p class="lead">A criminal has struck somewhere in the world. You have one week to track them down.</p>
   <ul class="mb-4">
-    <li>Investigate locations to reveal <strong>suspect clues</strong> and <strong>travel hints</strong></li>
+    <li>Visit locations and speak to witnesses — some know something, some don't</li>
     <li>Use the World Factbook to identify your next destination</li>
     <li>Issue a warrant once you know the culprit, then make the arrest</li>
   </ul>
@@ -1129,7 +975,7 @@ mkdir -p game/templates/game
     {% endif %}
   {% endif %}
 
-  <p><strong>Clues you collected:</strong></p>
+  <p class="mt-3"><strong>Clues you collected:</strong></p>
   {% if game.clues_seen %}
     <ul>
       {% for clue in game.clues_seen %}
@@ -1148,7 +994,7 @@ mkdir -p game/templates/game
 {% endblock %}
 ```
 
-- [ ] **Step 4: Run tests — index and result views should now pass fully**
+- [ ] **Step 4: Run index and result view tests**
 
 ```bash
 .venv/bin/python manage.py test game.tests.IndexViewTest game.tests.ResultViewTest -v 2
@@ -1186,8 +1032,8 @@ git commit -m "feat: add game index and result templates"
     </div>
     <div class="text-center">
       <small class="text-muted d-block">Time Remaining</small>
-      <strong class="fs-4 {% if game.time_remaining <= 6 %}text-danger{% else %}text-warning{% endif %}">
-        {{ game.time_remaining }}h
+      <strong class="fs-5 {% if game.time_remaining <= 12 %}text-danger{% else %}text-warning{% endif %}">
+        {{ time_display }}
       </strong>
     </div>
     <div class="text-end">
@@ -1202,59 +1048,98 @@ git commit -m "feat: add game index and result templates"
 
   <div class="row g-4">
 
-    {# Left panel: investigate + travel #}
+    {# Left panel #}
     <div class="col-md-7">
 
-      <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">Investigate a Location</h5>
-      <div class="row g-2 mb-4">
-        {% for loc in locations %}
-          <div class="col-6">
-            <form method="post" action="{% url 'game:investigate' %}">
-              {% csrf_token %}
-              <input type="hidden" name="location" value="{{ loc.key }}">
-              <button type="submit" class="btn btn-outline-secondary w-100 text-start {% if not loc.available %}disabled{% endif %}" {% if not loc.available %}disabled{% endif %}>
-                <span class="fs-5">{{ loc.icon }}</span>
-                <span class="ms-2 fw-semibold">{{ loc.name }}</span>
-                <br>
-                <small class="text-muted ms-2">
-                  {% if loc.available %}
-                    Costs {{ loc.cost }}h —
-                    {% if loc.clue_type == 'travel' %}
-                      <span class="text-warning">travel clue</span>
-                    {% else %}
-                      <span class="text-info">suspect clue</span>
-                    {% endif %}
-                  {% else %}
-                    No more clues here
-                  {% endif %}
-                </small>
-              </button>
-            </form>
+      {% if game.last_witness_result %}
+        {% if game.last_witness_result.clue %}
+          <div class="alert alert-success">
+            <strong>{{ game.last_witness_result.witness }}</strong> told you: "{{ game.last_witness_result.clue }}"
           </div>
-        {% endfor %}
-      </div>
+        {% else %}
+          <div class="alert alert-secondary">
+            <strong>{{ game.last_witness_result.witness }}</strong> didn't know anything useful.
+          </div>
+        {% endif %}
+      {% endif %}
 
-      {% if travel_options %}
-        <h5 class="text-uppercase text-muted mb-2" style="font-size:0.8rem;letter-spacing:0.05em">Fly to Next Destination</h5>
-        <p class="text-muted small mb-3">Use your travel clues to pick the right country. Wrong choice costs 4 hours.</p>
-        <div class="row g-2">
-          {% for country in travel_options %}
+      {% if active_location %}
+        {# Witness selection mode #}
+        {% for loc in locations %}{% if loc.key == active_location %}
+          <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">
+            {{ loc.icon }} {{ loc.name }} — Choose someone to speak to
+          </h5>
+        {% endif %}{% endfor %}
+
+        <div class="row g-2 mb-4">
+          {% for witness in witnesses %}
             <div class="col-4">
-              <form method="post" action="{% url 'game:travel' %}">
+              <form method="post" action="{% url 'game:speak' %}">
                 {% csrf_token %}
-                <input type="hidden" name="country_id" value="{{ country.pk }}">
-                <button type="submit" class="btn btn-outline-primary w-100">
-                  <div class="fw-semibold">{{ country.common_name }}</div>
-                  <small class="text-muted">6h flight</small>
+                <input type="hidden" name="witness_name" value="{{ witness }}">
+                <button type="submit" class="btn btn-outline-warning w-100 py-3">
+                  👤 {{ witness }}
                 </button>
               </form>
             </div>
           {% endfor %}
         </div>
+
+        <form method="post" action="{% url 'game:investigate' %}">
+          {% csrf_token %}
+          <input type="hidden" name="location" value="">
+          <a href="{% url 'game:case' %}" class="btn btn-sm btn-link text-muted">← Back to locations</a>
+        </form>
+
       {% else %}
-        <div class="alert alert-info">
-          You are at the <strong>final location</strong>. Issue a warrant and make the arrest.
+        {# Normal mode: location buttons #}
+        <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">Investigate a Location</h5>
+        <div class="row g-2 mb-4">
+          {% for loc in locations %}
+            <div class="col-6">
+              <form method="post" action="{% url 'game:investigate' %}">
+                {% csrf_token %}
+                <input type="hidden" name="location" value="{{ loc.key }}">
+                <button type="submit" class="btn btn-outline-secondary w-100 text-start {% if not loc.available %}disabled{% endif %}" {% if not loc.available %}disabled{% endif %}>
+                  <span class="fs-5">{{ loc.icon }}</span>
+                  <span class="ms-2 fw-semibold">{{ loc.name }}</span>
+                  <br>
+                  <small class="text-muted ms-2">
+                    {% if loc.available %}
+                      {{ loc.cost }}h per conversation
+                    {% else %}
+                      No leads here
+                    {% endif %}
+                  </small>
+                </button>
+              </form>
+            </div>
+          {% endfor %}
         </div>
+
+        {% if travel_options %}
+          <h5 class="text-uppercase text-muted mb-2" style="font-size:0.8rem;letter-spacing:0.05em">Fly to Next Destination</h5>
+          <p class="text-muted small mb-3">Use your travel clues to pick the right country. Wrong choice costs 4 hours.</p>
+          <div class="row g-2">
+            {% for country in travel_options %}
+              <div class="col-4">
+                <form method="post" action="{% url 'game:travel' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="country_id" value="{{ country.pk }}">
+                  <button type="submit" class="btn btn-outline-primary w-100">
+                    <div class="fw-semibold">{{ country.common_name }}</div>
+                    <small class="text-muted">6h flight</small>
+                  </button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info">
+            You are at the <strong>final location</strong>. Issue a warrant and make the arrest.
+          </div>
+        {% endif %}
+
       {% endif %}
 
     </div>
@@ -1274,7 +1159,7 @@ git commit -m "feat: add game index and result templates"
               {% endfor %}
             </ul>
           {% else %}
-            <p class="text-muted small mb-0">No clues collected yet. Investigate a location.</p>
+            <p class="text-muted small mb-0">No clues yet. Visit a location and speak to witnesses.</p>
           {% endif %}
         </div>
       </div>
@@ -1317,13 +1202,13 @@ git commit -m "feat: add game index and result templates"
 ```bash
 .venv/bin/python manage.py test game -v 2
 ```
-Expected: `OK` — all tests pass now that templates exist.
+Expected: `OK` — all tests pass.
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add game/templates/game/case.html
-git commit -m "feat: add main game screen template"
+git commit -m "feat: add main game screen template with witness selection"
 ```
 
 ---
@@ -1335,7 +1220,7 @@ git commit -m "feat: add main game screen template"
 
 - [ ] **Step 1: Add Game link to navbar in `templates/base.html`**
 
-Find the line:
+Find:
 ```html
             <li class="nav-item"><a class="nav-link" href="{% url 'factbook:index' %}">World Fact Book</a></li>
 ```
@@ -1345,14 +1230,14 @@ Add after it:
             <li class="nav-item"><a class="nav-link" href="{% url 'game:index' %}">Play Game</a></li>
 ```
 
-- [ ] **Step 2: Run the full test suite**
+- [ ] **Step 2: Run full test suite**
 
 ```bash
 .venv/bin/python manage.py test -v 2
 ```
 Expected: all tests pass across all apps.
 
-- [ ] **Step 3: Start the dev server and manually verify the game**
+- [ ] **Step 3: Start dev server and manually verify**
 
 ```bash
 .venv/bin/python manage.py runserver
@@ -1360,12 +1245,12 @@ Expected: all tests pass across all apps.
 
 Visit `http://localhost:8000/game/` and play through a full case:
 - Click "Start New Case"
-- Investigate at least 2 locations (mix of Police Station and Library)
-- Note the clues in the Notepad
-- Fly to a destination
+- Click a location, choose a witness, observe the result (clue or nothing)
+- Repeat a few times
+- Fly to a country using travel clues
 - Issue a warrant
 - Make an arrest
-- Verify the result screen shows the correct culprit
+- Verify result screen shows correct culprit and collected clues
 
 - [ ] **Step 4: Commit**
 
