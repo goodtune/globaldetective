@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Active Case — {{ current_country.common_name }}{% endblock %}
+
+{% block content %}
+
+  {# Top bar #}
+  <div class="d-flex justify-content-between align-items-center bg-dark text-white rounded p-3 mb-4">
+    <div>
+      <small class="text-muted d-block">Current Location</small>
+      <strong>{{ current_country.common_name }}</strong>
+    </div>
+    <div class="text-center">
+      <small class="text-muted d-block">Time Remaining</small>
+      <strong class="fs-5 {% if game.time_remaining <= 12 %}text-danger{% else %}text-warning{% endif %}">
+        {{ time_display }}
+      </strong>
+    </div>
+    <div class="text-end">
+      <small class="text-muted d-block">Warrant</small>
+      {% if warrant_suspect %}
+        <strong class="text-success">{{ warrant_suspect.name }}</strong>
+      {% else %}
+        <span class="text-muted">None issued</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    {# Left panel #}
+    <div class="col-md-7">
+
+      {% if game.last_witness_result %}
+        {% if game.last_witness_result.clue %}
+          <div class="alert alert-success">
+            <strong>{{ game.last_witness_result.witness }}</strong> told you: "{{ game.last_witness_result.clue }}"
+          </div>
+        {% else %}
+          <div class="alert alert-secondary">
+            <strong>{{ game.last_witness_result.witness }}</strong> didn't know anything useful.
+          </div>
+        {% endif %}
+      {% endif %}
+
+      {% if active_location %}
+        {# Witness selection mode #}
+        {% for loc in locations %}{% if loc.key == active_location %}
+          <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">
+            {{ loc.icon }} {{ loc.name }} — Choose someone to speak to
+          </h5>
+        {% endif %}{% endfor %}
+
+        <div class="row g-2 mb-4">
+          {% for witness in witnesses %}
+            <div class="col-4">
+              <form method="post" action="{% url 'game:speak' %}">
+                {% csrf_token %}
+                <input type="hidden" name="witness_name" value="{{ witness }}">
+                <button type="submit" class="btn btn-outline-warning w-100 py-3">
+                  👤 {{ witness }}
+                </button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+
+        <a href="{% url 'game:case' %}" class="btn btn-sm btn-link text-muted">← Back to locations</a>
+
+      {% else %}
+        {# Normal mode: location buttons #}
+        <h5 class="text-uppercase text-muted mb-3" style="font-size:0.8rem;letter-spacing:0.05em">Investigate a Location</h5>
+        <div class="row g-2 mb-4">
+          {% for loc in locations %}
+            <div class="col-6">
+              <form method="post" action="{% url 'game:investigate' %}">
+                {% csrf_token %}
+                <input type="hidden" name="location" value="{{ loc.key }}">
+                <button type="submit" class="btn btn-outline-secondary w-100 text-start {% if not loc.available %}disabled{% endif %}" {% if not loc.available %}disabled{% endif %}>
+                  <span class="fs-5">{{ loc.icon }}</span>
+                  <span class="ms-2 fw-semibold">{{ loc.name }}</span>
+                  <br>
+                  <small class="text-muted ms-2">
+                    {% if loc.available %}
+                      {{ loc.cost }}h per conversation
+                    {% else %}
+                      No leads here
+                    {% endif %}
+                  </small>
+                </button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+
+        {% if travel_options %}
+          <h5 class="text-uppercase text-muted mb-2" style="font-size:0.8rem;letter-spacing:0.05em">Fly to Next Destination</h5>
+          <p class="text-muted small mb-3">Use your travel clues to pick the right country. Wrong choice costs 4 hours.</p>
+          <div class="row g-2">
+            {% for country in travel_options %}
+              <div class="col-4">
+                <form method="post" action="{% url 'game:travel' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="country_id" value="{{ country.pk }}">
+                  <button type="submit" class="btn btn-outline-primary w-100">
+                    <div class="fw-semibold">{{ country.common_name }}</div>
+                    <small class="text-muted">6h flight</small>
+                  </button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info">
+            You are at the <strong>final location</strong>. Issue a warrant and make the arrest.
+          </div>
+        {% endif %}
+
+      {% endif %}
+
+    </div>
+
+    {# Right panel: notepad + warrant + arrest #}
+    <div class="col-md-5">
+
+      <div class="card border-warning mb-3">
+        <div class="card-header bg-warning bg-opacity-25">
+          <strong>📓 Notepad</strong>
+        </div>
+        <div class="card-body" style="max-height:300px;overflow-y:auto">
+          {% if game.clues_seen %}
+            <ul class="list-unstyled mb-0">
+              {% for clue in game.clues_seen %}
+                <li class="border-bottom py-2 small">{{ clue }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted small mb-0">No clues yet. Visit a location and speak to witnesses.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><strong>Issue Warrant</strong></div>
+        <div class="card-body">
+          <form method="post" action="{% url 'game:warrant' %}">
+            {% csrf_token %}
+            <select name="suspect_id" class="form-select form-select-sm mb-2">
+              <option value="">— Select a suspect —</option>
+              {% for s in suspects %}
+                <option value="{{ s.pk }}" {% if warrant_suspect and warrant_suspect.pk == s.pk %}selected{% endif %}>
+                  {{ s.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-warning btn-sm w-100">Issue Warrant</button>
+          </form>
+        </div>
+      </div>
+
+      {% if warrant_suspect %}
+        <form method="post" action="{% url 'game:arrest' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger w-100">
+            🚨 Make Arrest — {{ warrant_suspect.name }}
+          </button>
+        </form>
+      {% endif %}
+
+    </div>
+  </div>
+
+{% endblock %}
