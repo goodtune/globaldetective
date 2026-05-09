@@ -364,3 +364,236 @@ class LocationWitnessesTest(TestCase):
     def test_all_locations_have_three_witnesses(self):
         for location in ("library", "police", "airport", "market"):
             self.assertEqual(len(LOCATION_WITNESSES[location]), 3)
+
+
+class IndexViewTest(TestCase):
+    def test_get_returns_200(self):
+        response = self.client.get("/game/")
+        self.assertEqual(response.status_code, 200)
+
+
+class NewCaseViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        for i in range(5):
+            make_country(str(i))
+
+    def test_post_creates_session_and_redirects(self):
+        response = self.client.post("/game/new/")
+        self.assertRedirects(response, "/game/case/")
+        self.assertIn("game", self.client.session)
+
+    def test_get_redirects_to_index(self):
+        response = self.client.get("/game/new/")
+        self.assertRedirects(response, "/game/")
+
+
+class CaseViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+
+    def test_get_with_active_game_returns_200(self):
+        self._start_game()
+        response = self.client.get("/game/case/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_without_game_redirects_to_index(self):
+        response = self.client.get("/game/case/")
+        self.assertRedirects(response, "/game/")
+
+
+class InvestigateViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+
+    def test_post_sets_active_location(self):
+        self._start_game()
+        self.client.post("/game/investigate/", {"location": "police"})
+        game = self.client.session["game"]
+        self.assertEqual(game["active_location"], "police")
+
+    def test_post_does_not_deduct_time(self):
+        self._start_game()
+        self.client.post("/game/investigate/", {"location": "police"})
+        game = self.client.session["game"]
+        self.assertEqual(game["time_remaining"], 168)
+
+    def test_post_redirects_to_case(self):
+        self._start_game()
+        response = self.client.post("/game/investigate/", {"location": "police"})
+        self.assertRedirects(response, "/game/case/")
+
+    def test_post_invalid_location_redirects_to_case(self):
+        self._start_game()
+        response = self.client.post("/game/investigate/", {"location": "bar"})
+        self.assertRedirects(response, "/game/case/")
+
+
+class SpeakViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game_at_location(self, location="police"):
+        from game.logic import generate_case
+        session = self.client.session
+        game = generate_case()
+        game["active_location"] = location
+        session["game"] = game
+        session.save()
+
+    def test_post_deducts_time(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertEqual(game["time_remaining"], 168 - 3)
+
+    def test_post_sets_last_witness_result(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertIsNotNone(game["last_witness_result"])
+        self.assertEqual(game["last_witness_result"]["witness"], "Officer")
+
+    def test_post_clears_active_location(self):
+        self._start_game_at_location("police")
+        self.client.post("/game/speak/", {"witness_name": "Officer"})
+        game = self.client.session["game"]
+        self.assertIsNone(game["active_location"])
+
+    def test_post_redirects_to_case(self):
+        self._start_game_at_location("police")
+        response = self.client.post("/game/speak/", {"witness_name": "Officer"})
+        self.assertRedirects(response, "/game/case/")
+
+    def test_post_without_active_location_redirects_to_case(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+        response = self.client.post("/game/speak/", {"witness_name": "Officer"})
+        self.assertRedirects(response, "/game/case/")
+
+
+class TravelViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+
+    def test_post_wrong_country_deducts_penalty(self):
+        self._start_game()
+        self.client.post("/game/travel/", {"country_id": "99999"})
+        game = self.client.session["game"]
+        self.assertEqual(game["time_remaining"], 168 - 4)
+
+    def test_post_correct_country_advances_stop(self):
+        self._start_game()
+        game = self.client.session["game"]
+        next_pk = game["trail"][1]
+        self.client.post("/game/travel/", {"country_id": str(next_pk)})
+        game = self.client.session["game"]
+        self.assertEqual(game["current_stop"], 1)
+
+
+class WarrantViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+
+    def test_post_sets_warrant_and_redirects(self):
+        self._start_game()
+        response = self.client.post("/game/warrant/", {"suspect_id": str(self.suspect.pk)})
+        self.assertRedirects(response, "/game/case/")
+        game = self.client.session["game"]
+        self.assertEqual(game["warrant_suspect_id"], self.suspect.pk)
+
+
+class ArrestViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _start_game(self):
+        from game.logic import generate_case
+        session = self.client.session
+        session["game"] = generate_case()
+        session.save()
+
+    def test_correct_warrant_redirects_to_result_as_won(self):
+        self._start_game()
+        game = self.client.session["game"]
+        suspect_pk = game["suspect_id"]
+        session = self.client.session
+        session["game"]["warrant_suspect_id"] = suspect_pk
+        session.save()
+        response = self.client.post("/game/arrest/")
+        self.assertRedirects(response, "/game/result/")
+        self.assertEqual(self.client.session["game"]["status"], "won")
+
+    def test_wrong_warrant_redirects_to_result_as_lost(self):
+        self._start_game()
+        session = self.client.session
+        session["game"]["warrant_suspect_id"] = 99999
+        session.save()
+        response = self.client.post("/game/arrest/")
+        self.assertRedirects(response, "/game/result/")
+        self.assertEqual(self.client.session["game"]["status"], "lost")
+
+
+class ResultViewTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.countries = [make_country(str(i)) for i in range(5)]
+
+    def _set_game(self, status):
+        from game.logic import generate_case
+        session = self.client.session
+        game = generate_case()
+        game["status"] = status
+        session["game"] = game
+        session.save()
+
+    def test_won_game_returns_200(self):
+        self._set_game("won")
+        response = self.client.get("/game/result/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_lost_game_returns_200(self):
+        self._set_game("lost")
+        response = self.client.get("/game/result/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_active_game_redirects_to_index(self):
+        self._set_game("active")
+        response = self.client.get("/game/result/")
+        self.assertRedirects(response, "/game/")
+
+    def test_no_game_redirects_to_index(self):
+        response = self.client.get("/game/result/")
+        self.assertRedirects(response, "/game/")
