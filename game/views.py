@@ -65,7 +65,7 @@ def case(request):
 
     warrant_suspect = None
     if game["warrant_suspect_id"]:
-        warrant_suspect = get_object_or_404(Suspect, pk=game["warrant_suspect_id"])
+        warrant_suspect = Suspect.objects.filter(pk=game["warrant_suspect_id"]).first()
 
     active_location = game.get("active_location")
     witnesses = LOCATION_WITNESSES.get(active_location, []) if active_location else []
@@ -166,7 +166,7 @@ def result(request):
     suspect = get_object_or_404(Suspect, pk=game["suspect_id"])
     warrant_suspect = None
     if game["warrant_suspect_id"]:
-        warrant_suspect = get_object_or_404(Suspect, pk=game["warrant_suspect_id"])
+        warrant_suspect = Suspect.objects.filter(pk=game["warrant_suspect_id"]).first()
     context = {
         "game": game,
         "suspect": suspect,
