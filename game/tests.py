@@ -769,3 +769,41 @@ class MinigameViewTest(TestCase):
         session.save()
         resp = self.client.get(reverse("game:minigame"))
         self.assertRedirects(resp, reverse("game:case"))
+
+    def test_frequency_correct_grants_clue(self):
+        # Set up a frequency minigame
+        session = self.client.session
+        session["game"]["active_minigame"] = "frequency"
+        session["game"]["active_location"] = "airport"
+        session["game"]["minigame_answer"] = 500
+        session.save()
+        self.client.post(
+            reverse("game:minigame"),
+            {"action": "solve", "freq": "510"},  # within ±20
+            follow=False,
+        )
+        game = self.client.session["game"]
+        self.assertEqual(len(game["clues_seen"]), 1)
+
+    def test_frequency_wrong_no_clue(self):
+        session = self.client.session
+        session["game"]["active_minigame"] = "frequency"
+        session["game"]["active_location"] = "airport"
+        session["game"]["minigame_answer"] = 500
+        session.save()
+        self.client.post(
+            reverse("game:minigame"),
+            {"action": "solve", "freq": "900"},  # outside ±20
+            follow=False,
+        )
+        game = self.client.session["game"]
+        self.assertEqual(len(game["clues_seen"]), 0)
+
+    def test_invalid_safe_post_no_clue(self):
+        self.client.post(
+            reverse("game:minigame"),
+            {"action": "solve", "d0": "abc", "d1": "xyz", "d2": "!"},
+            follow=False,
+        )
+        game = self.client.session["game"]
+        self.assertEqual(len(game["clues_seen"]), 0)

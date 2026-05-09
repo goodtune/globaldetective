@@ -106,9 +106,16 @@
           </form>
         </div>
 
+        {{ answer|json_script:"minigame-answer" }}
         <script>
-        const CORRECT = {{ answer|safe }};
+        const CORRECT = JSON.parse(document.getElementById('minigame-answer').textContent);
         const vals = [0, 0, 0];
+        let origHeights = null;
+        function initWaveform() {
+          const bars = document.querySelectorAll('#waveform .bar');
+          origHeights = Array.from(bars).map(b => parseInt(b.style.height));
+        }
+        initWaveform();
 
         function spin(w, d) {
           vals[w] = (vals[w] + d + 10) % 10;
@@ -129,9 +136,9 @@
           const matchCount = vals.filter((v, i) => v === CORRECT[i]).length;
           const bars = document.querySelectorAll('#waveform .bar');
           bars.forEach((b, idx) => {
-            const base = parseInt(b.style.height);
-            const boost = matchCount * 8;
-            b.style.height = (base + boost * (Math.sin(idx * 0.8) * 0.5 + 0.5)) + 'px';
+            const base = origHeights[idx];
+            const boost = matchCount * 8 * (Math.sin(idx * 0.8) * 0.5 + 0.5);
+            b.style.height = (base + boost) + 'px';
             b.style.opacity = 0.3 + matchCount * 0.23;
           });
         }
@@ -176,8 +183,9 @@
           </form>
         </div>
 
+        {{ answer|json_script:"minigame-answer" }}
         <script>
-        const TARGET = {{ answer }};
+        const TARGET = JSON.parse(document.getElementById('minigame-answer').textContent);
         const TOLS = 20;
 
         const canvas = document.getElementById('spectrum-canvas');
@@ -187,8 +195,8 @@
           canvas.width = canvas.offsetWidth;
           canvas.height = canvas.offsetHeight;
         }
-        resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+        requestAnimationFrame(resizeCanvas);
 
         let currentSliderVal = 500;
 
