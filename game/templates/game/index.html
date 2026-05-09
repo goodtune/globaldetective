@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}New Case — Global Detective{% endblock %}
+
+{% block content %}
+  <h1 class="mb-3">Global Detective Quest</h1>
+  <p class="lead">A criminal has struck somewhere in the world. You have one week to track them down.</p>
+  <ul class="mb-4">
+    <li>Visit locations and speak to witnesses — some know something, some don't</li>
+    <li>Use the World Factbook to identify your next destination</li>
+    <li>Issue a warrant once you know the culprit, then make the arrest</li>
+  </ul>
+  <form method="post" action="{% url 'game:new' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-lg">Start New Case</button>
+  </form>
+{% endblock %}
