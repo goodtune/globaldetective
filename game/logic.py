@@ -34,6 +34,10 @@ MINIGAME_LOCATIONS = {
     "airport": "frequency",
 }
 
+SAFE_DIGITS = 3
+FREQUENCY_MIN = 100
+FREQUENCY_MAX = 900
+
 
 def format_time(hours):
     days, remaining = divmod(hours, 24)
@@ -77,10 +81,10 @@ def do_investigate(game, location):
     minigame = MINIGAME_LOCATIONS.get(location)
     if minigame == "safe":
         game["active_minigame"] = "safe"
-        game["minigame_answer"] = [random.randint(0, 9) for _ in range(3)]
+        game["minigame_answer"] = [random.randint(0, 9) for _ in range(SAFE_DIGITS)]
     elif minigame == "frequency":
         game["active_minigame"] = "frequency"
-        game["minigame_answer"] = random.randint(100, 900)
+        game["minigame_answer"] = random.randint(FREQUENCY_MIN, FREQUENCY_MAX)
     else:
         game["active_minigame"] = None
         game["minigame_answer"] = None

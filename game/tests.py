@@ -1,3 +1,5 @@
+import copy
+
 from django.test import TestCase
 
 from criminals.models import Suspect
@@ -107,7 +109,6 @@ from unittest.mock import patch
 from game.logic import (
     FLIGHT_COST,
     LOCATION_WITNESSES,
-    MINIGAME_LOCATIONS,
     WRONG_FLIGHT_PENALTY,
     do_arrest,
     do_investigate,
@@ -407,7 +408,7 @@ class DoMinigameTest(TestCase):
         self.game = make_game(self.suspect, [self.c1, self.c2])
 
     def _with_minigame(self, minigame_type, answer):
-        g = dict(self.game)
+        g = copy.deepcopy(self.game)
         g["active_location"] = "police" if minigame_type == "safe" else "airport"
         g["active_minigame"] = minigame_type
         g["minigame_answer"] = answer
@@ -449,6 +450,14 @@ class DoMinigameTest(TestCase):
         g["time_remaining"] = 1
         result = do_minigame(g, solved=False)
         self.assertEqual(result["status"], "lost")
+
+    def test_success_with_empty_pool_no_clue(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        # empty the pool
+        g["clues_available"]["0"]["suspect"] = []
+        result = do_minigame(g, solved=True)
+        self.assertEqual(len(result["clues_seen"]), 0)
+        self.assertIsNone(result["last_witness_result"]["clue"])
 
 
 class LocationWitnessesTest(TestCase):
