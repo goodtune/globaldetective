@@ -29,6 +29,11 @@ LOCATION_WITNESSES = {
     "market": ["Merchant", "Customer", "Market Inspector"],
 }
 
+MINIGAME_LOCATIONS = {
+    "police": "safe",
+    "airport": "frequency",
+}
+
 
 def format_time(hours):
     days, remaining = divmod(hours, 24)
@@ -56,6 +61,8 @@ def generate_case():
         "clues_seen": [],
         "clues_available": clues_available,
         "active_location": None,
+        "active_minigame": None,
+        "minigame_answer": None,
         "last_witness_result": None,
         "time_remaining": STARTING_TIME,
         "warrant_suspect_id": None,
@@ -67,6 +74,44 @@ def do_investigate(game, location):
     game = copy.deepcopy(game)
     game["active_location"] = location
     game["last_witness_result"] = None
+    minigame = MINIGAME_LOCATIONS.get(location)
+    if minigame == "safe":
+        game["active_minigame"] = "safe"
+        game["minigame_answer"] = [random.randint(0, 9) for _ in range(3)]
+    elif minigame == "frequency":
+        game["active_minigame"] = "frequency"
+        game["minigame_answer"] = random.randint(100, 900)
+    else:
+        game["active_minigame"] = None
+        game["minigame_answer"] = None
+    return game
+
+
+def do_minigame(game, solved):
+    game = copy.deepcopy(game)
+    location = game["active_location"]
+    game["time_remaining"] -= LOCATION_COSTS[location]
+
+    if solved:
+        stop_key = str(game["current_stop"])
+        clue_type = LOCATION_CLUE_TYPE[location]
+        pool = game["clues_available"][stop_key][clue_type]
+        clue_text = None
+        if pool:
+            clue = pool.pop(0)
+            clue_text = clue["text"]
+            game["clues_seen"].append(clue_text)
+        game["last_witness_result"] = {"witness": "The evidence", "clue": clue_text}
+    else:
+        game["last_witness_result"] = {"witness": "The device", "clue": None}
+
+    game["active_minigame"] = None
+    game["minigame_answer"] = None
+    game["active_location"] = None
+
+    if game["time_remaining"] <= 0:
+        game["status"] = "lost"
+
     return game
 
 

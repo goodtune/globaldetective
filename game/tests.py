@@ -107,9 +107,11 @@ from unittest.mock import patch
 from game.logic import (
     FLIGHT_COST,
     LOCATION_WITNESSES,
+    MINIGAME_LOCATIONS,
     WRONG_FLIGHT_PENALTY,
     do_arrest,
     do_investigate,
+    do_minigame,
     do_speak,
     do_travel,
     do_warrant,
@@ -132,6 +134,8 @@ def make_game(suspect, trail):
         "clues_seen": [],
         "clues_available": clues_available,
         "active_location": None,
+        "active_minigame": None,
+        "minigame_answer": None,
         "last_witness_result": None,
         "time_remaining": 168,
         "warrant_suspect_id": None,
@@ -357,6 +361,93 @@ class DoArrestTest(TestCase):
         game = make_game(self.suspect, self.countries)
         game["warrant_suspect_id"] = 99999
         result = do_arrest(game)
+        self.assertEqual(result["status"], "lost")
+
+
+class DoInvestigateMinigameTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.c1 = make_country("MG")
+        self.c2 = make_country("MH")
+        self.game = make_game(self.suspect, [self.c1, self.c2])
+
+    def test_police_sets_safe_minigame(self):
+        g = do_investigate(self.game, "police")
+        self.assertEqual(g["active_minigame"], "safe")
+        ans = g["minigame_answer"]
+        self.assertIsInstance(ans, list)
+        self.assertEqual(len(ans), 3)
+        for d in ans:
+            self.assertIn(d, range(10))
+
+    def test_airport_sets_frequency_minigame(self):
+        g = do_investigate(self.game, "airport")
+        self.assertEqual(g["active_minigame"], "frequency")
+        ans = g["minigame_answer"]
+        self.assertIsInstance(ans, int)
+        self.assertGreaterEqual(ans, 100)
+        self.assertLessEqual(ans, 900)
+
+    def test_library_no_minigame(self):
+        g = do_investigate(self.game, "library")
+        self.assertIsNone(g["active_minigame"])
+        self.assertIsNone(g["minigame_answer"])
+
+    def test_market_no_minigame(self):
+        g = do_investigate(self.game, "market")
+        self.assertIsNone(g["active_minigame"])
+        self.assertIsNone(g["minigame_answer"])
+
+
+class DoMinigameTest(TestCase):
+    def setUp(self):
+        self.suspect = make_suspect()
+        self.c1 = make_country("MX")
+        self.c2 = make_country("MY")
+        self.game = make_game(self.suspect, [self.c1, self.c2])
+
+    def _with_minigame(self, minigame_type, answer):
+        g = dict(self.game)
+        g["active_location"] = "police" if minigame_type == "safe" else "airport"
+        g["active_minigame"] = minigame_type
+        g["minigame_answer"] = answer
+        return g
+
+    def test_success_grants_clue(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        result = do_minigame(g, solved=True)
+        self.assertEqual(len(result["clues_seen"]), 1)
+        self.assertIsNotNone(result["last_witness_result"]["clue"])
+
+    def test_failure_no_clue(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        result = do_minigame(g, solved=False)
+        self.assertEqual(len(result["clues_seen"]), 0)
+        self.assertIsNone(result["last_witness_result"]["clue"])
+
+    def test_deducts_time_on_success(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        before = g["time_remaining"]
+        result = do_minigame(g, solved=True)
+        self.assertLess(result["time_remaining"], before)
+
+    def test_deducts_time_on_failure(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        before = g["time_remaining"]
+        result = do_minigame(g, solved=False)
+        self.assertLess(result["time_remaining"], before)
+
+    def test_clears_minigame_state(self):
+        g = self._with_minigame("frequency", 500)
+        result = do_minigame(g, solved=True)
+        self.assertIsNone(result["active_minigame"])
+        self.assertIsNone(result["minigame_answer"])
+        self.assertIsNone(result["active_location"])
+
+    def test_lost_when_time_runs_out(self):
+        g = self._with_minigame("safe", [1, 2, 3])
+        g["time_remaining"] = 1
+        result = do_minigame(g, solved=False)
         self.assertEqual(result["status"], "lost")
 
 
