@@ -1,4 +1,4 @@
-FROM almalinux:8
+FROM almalinux:10
 
 EXPOSE 8000
 
